@@ -1,33 +1,35 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: '#0f766e', // Tu verde característico
+        tabBarInactiveTintColor: isDark ? '#64748b' : '#94a3b8', // Gris adaptativo
+        tabBarStyle: {
+          backgroundColor: isDark ? '#020617' : '#ffffff', // slate-950 o blanco
+          borderTopColor: isDark ? '#1e293b' : '#e2e8f0', // Borde sutil adaptativo
+        },
         headerShown: false,
-        tabBarButton: HapticTab,
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Simulador',
+          tabBarIcon: ({ color }) => <Ionicons name="calculator" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="explore" // OJO: Si tu archivo de la tabla se llama "two.tsx", cambia "explore" por "two"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Cuotas',
+          tabBarIcon: ({ color }) => <Ionicons name="calendar-outline" size={24} color={color} />,
         }}
       />
     </Tabs>

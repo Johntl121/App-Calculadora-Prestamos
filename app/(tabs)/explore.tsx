@@ -1,112 +1,167 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
+import React from 'react';
+import { FlatList, Pressable, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLoanStore } from '../../src/store/useLoanStore';
+import { AmortizationRow } from '../../src/types';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const formatNum = (value: number) =>
+  value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function TabTwoScreen() {
+export default function AmortizationTableScreen() {
+  const { amortizationTable, moneda } = useLoanStore();
+  const { colorScheme, toggleColorScheme } = useColorScheme();
+  const insets = useSafeAreaInsets();
+  const isDark = colorScheme === 'dark';
+
+  const renderItem = ({ item, index }: { item: AmortizationRow; index: number }) => {
+    const isZebra = index % 2 === 1;
+    const rowBg = isZebra
+      ? (isDark ? 'rgba(30,41,59,0.6)' : 'rgba(248,250,252,0.8)')
+      : (isDark ? '#1e293b' : '#ffffff');
+    const textMain = isDark ? '#e2e8f0' : '#334155';
+    const textSub = isDark ? '#94a3b8' : '#64748b';
+    const textAccent = isDark ? '#5eead4' : '#0f766e';
+
+    return (
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: 11,
+          paddingHorizontal: 10,
+          backgroundColor: rowBg,
+          borderBottomWidth: 1,
+          borderBottomColor: isDark ? '#0f172a' : '#f1f5f9',
+          marginHorizontal: 20,
+        }}
+      >
+        {/* Mes */}
+        <Text style={{ width: '6%', color: textSub, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }}>
+          {item.mes}
+        </Text>
+        {/* Fecha */}
+        <Text style={{ width: '18%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }}>
+          {item.fecha}
+        </Text>
+        {/* Cuota */}
+        <Text style={{ width: '18%', color: textMain, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+          {moneda} {formatNum(item.cuotaFija)}
+        </Text>
+        {/* Capital */}
+        <Text style={{ width: '18%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+          {moneda} {formatNum(item.capitalAmortizado)}
+        </Text>
+        {/* Interés */}
+        <Text style={{ width: '22%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+          {moneda} {formatNum(item.interesPagado)}
+        </Text>
+        {/* Saldo */}
+        <Text style={{ width: '18%', color: textAccent, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+          {moneda} {formatNum(item.saldoRemanente)}
+        </Text>
+      </View>
+    );
+  };
+
+  const renderEmpty = () => (
+    <View className="flex-1 items-center justify-center px-10">
+      <View
+        style={{
+          width: 96, height: 96, borderRadius: 48,
+          backgroundColor: isDark ? '#1e293b' : 'rgba(226,232,240,0.5)',
+          alignItems: 'center', justifyContent: 'center', marginBottom: 24,
+        }}
+      >
+        <Ionicons name="calendar-outline" size={40} color={isDark ? '#475569' : '#94a3b8'} />
+      </View>
+      <Text className="text-xl font-bold text-slate-800 dark:text-white text-center mb-3">
+        Aún no hay datos
+      </Text>
+      <Text className="text-slate-500 dark:text-slate-400 text-center text-sm leading-relaxed">
+        Ve al Simulador, configura tus parámetros, presiona "Calcular Préstamo" y luego "Ver Tabla de Amortización".
+      </Text>
+    </View>
+  );
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
+    <View
+      className="flex-1 bg-slate-100 dark:bg-slate-950"
+      style={{ paddingTop: insets.top }}
+    >
+      {/* Encabezado */}
+      <View className="px-6 pt-8 pb-4">
+        <Text className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-widest uppercase mb-1">
+          Resumen de Préstamo
+        </Text>
+        <Text className="text-3xl font-black text-slate-950 dark:text-white tracking-tight">
+          Plan de Amortización
+        </Text>
+      </View>
+
+      {/* Cabecera de la Tabla */}
+      {amortizationTable.length > 0 && (
+        <View
           style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
+            flexDirection: 'row',
+            backgroundColor: '#0f172a',
+            paddingVertical: 14,
+            paddingHorizontal: 10,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            marginHorizontal: 20,
+            marginTop: 8,
+          }}
+        >
+          <Text style={{ width: '6%',  color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Mes</Text>
+          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Fecha</Text>
+          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Cuota</Text>
+          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Capital</Text>
+          <Text style={{ width: '22%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Interés</Text>
+          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Saldo</Text>
+        </View>
+      )}
+
+      {/* Lista */}
+      <FlatList
+        data={amortizationTable}
+        keyExtractor={(item) => item.mes.toString()}
+        renderItem={renderItem}
+        ListEmptyComponent={renderEmpty}
+        contentContainerStyle={amortizationTable.length === 0 ? { flexGrow: 1 } : { paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+        ListFooterComponent={
+          amortizationTable.length > 0
+            ? (
+              <View
+                style={{
+                  height: 24,
+                  backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                  marginHorizontal: 20,
+                  borderBottomLeftRadius: 24,
+                  borderBottomRightRadius: 24,
+                  marginBottom: 32,
+                }}
+              />
+            )
+            : null
+        }
+      />
+
+      {/* Botón Modo Oscuro */}
+      <Pressable
+        onPress={toggleColorScheme}
+        className="absolute right-6 rounded-full p-2.5 bg-slate-200/60 dark:bg-slate-800"
+        style={{ top: insets.top + 12, zIndex: 999, elevation: 5 }}
+      >
+        <Ionicons
+          name={isDark ? 'sunny' : 'moon'}
+          size={20}
+          color={isDark ? '#fef08a' : '#334155'}
         />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      </Pressable>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-});
