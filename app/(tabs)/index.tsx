@@ -44,11 +44,11 @@ export default function LoanCalculatorScreen() {
     resetStore,
   } = useLoanStore();
 
-  const [isCalculated, setIsCalculated] = useState(false);
-  const [montoText, setMontoText]             = useState(monto.toString());
-  const [tasaText,  setTasaText]               = useState(tasaInteres.toString());
-  const [desgravamenText, setDesgravamenText]  = useState(seguroDesgravamenRateMensual.toString());
-  const [plazoText, setPlazoText]             = useState(plazoMeses.toString());
+  const [isCalculated, setIsCalculated]           = useState(false);
+  const [montoText, setMontoText]                 = useState(monto.toString());
+  const [tasaText, setTasaText]                   = useState(tasaInteres.toString());
+  const [desgravamenText, setDesgravamenText]     = useState(seguroDesgravamenRateMensual.toString());
+  const [plazoText, setPlazoText]                 = useState(plazoMeses.toString());
 
   // Sincronizar inputs locales cuando el store cambia (ej: botón Reset)
   React.useEffect(() => {
@@ -103,26 +103,38 @@ export default function LoanCalculatorScreen() {
     setIsCalculated(true);
   };
 
-  /* ── PDF ──────────────────────────────────────────────────────────────────── */
+  /* ── PDF estilo BCP ───────────────────────────────────────────────────────── */
 
   const generatePDF = async () => {
     try {
-      const formatNum = (value: number) =>
-        value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const fn = (v: number) =>
+        v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+      // Acumuladores para el pie de tabla
+      let totalAmort = 0, totalInteres = 0, totalSeguro = 0, totalCuotas = 0;
+      amortizationTable.forEach((r) => {
+        if (r.mes === 0) return;
+        totalAmort   += r.capitalAmortizado;
+        totalInteres += r.interesPagado;
+        totalSeguro  += r.seguroDesgravamen;
+        totalCuotas  += r.cuotaTotal;
+      });
+
+      // Orden BCP: Mes | Vcto. | Saldo Capital | Amortización | Interés | Seguro | Cuota
       const tableRows = amortizationTable.map((row) => `
-        <tr>
+        <tr class="${row.mes === 0 ? 'row-desembolso' : (row.mes % 2 === 0 ? 'row-even' : '')}">
           <td style="text-align:center;">${row.mes}</td>
           <td style="text-align:center;">${row.fecha}</td>
-          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.capitalAmortizado)}`}</td>
-          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.interesPagado)}`}</td>
-          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.seguroDesgravamen)}`}</td>
-          <td style="text-align:right; font-weight:bold;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.cuotaTotal)}`}</td>
-          <td style="text-align:right; color:#0f766e; font-weight:bold;">${moneda} ${formatNum(row.saldoRemanente)}</td>
+          <td style="text-align:right; color:#0f766e; font-weight:bold;">${moneda} ${fn(row.saldoRemanente)}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.capitalAmortizado)}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.interesPagado)}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.seguroDesgravamen)}</td>
+          <td style="text-align:right; font-weight:bold;">${row.mes === 0 ? '<i>DESEMBOLSO</i>' : `${moneda} ${fn(row.cuotaTotal)}`}</td>
         </tr>
       `).join('');
 
       const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
+      const cuotaMes1  = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -130,46 +142,80 @@ export default function LoanCalculatorScreen() {
           <head>
             <meta name="viewport" content="width=device-width,initial-scale=1.0" />
             <style>
-              body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; padding:20px; color:#333; }
-              h1   { color:#0f766e; text-align:center; margin-bottom:5px; font-size:24px; }
-              .summary-box { background:#f1f5f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center; }
-              .summary-box p { margin:6px 0; font-size:14px; }
-              table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
-              th, td { padding:10px 5px; border-bottom:1px solid #e2e8f0; }
-              th { background-color:#0f766e; color:#fff; text-transform:uppercase; font-size:10px; }
-              tr:nth-child(even) { background:#f8fafc; }
+              * { box-sizing:border-box; margin:0; padding:0; }
+              body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; padding:24px; color:#1e293b; background:#f8fafc; }
+
+              .header { background:linear-gradient(135deg,#0f766e,#0f172a); color:white; padding:20px 24px; border-radius:12px; margin-bottom:20px; }
+              .header h1 { font-size:22px; font-weight:900; margin-bottom:4px; }
+              .header p  { font-size:13px; opacity:0.8; }
+
+              .summary { display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+              .card { flex:1; min-width:110px; background:white; border-radius:10px; padding:14px 16px; border-left:4px solid #0f766e; }
+              .card .lbl { font-size:10px; font-weight:bold; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+              .card .val { font-size:18px; font-weight:900; color:#0f172a; }
+              .card .val.teal { color:#0f766e; }
+
+              table { width:100%; border-collapse:collapse; background:white; border-radius:10px; overflow:hidden; font-size:11px; }
+              thead tr { background:#0f766e; color:white; }
+              th { padding:10px 7px; text-align:right; font-size:9px; text-transform:uppercase; letter-spacing:0.5px; }
+              th:first-child, th:nth-child(2) { text-align:center; }
+              td { padding:9px 7px; text-align:right; border-bottom:1px solid #f1f5f9; color:#334155; }
+              td:first-child, td:nth-child(2) { text-align:center; color:#64748b; }
+              .row-even { background:#f8fafc; }
+              .row-desembolso { background:#f0fdf4; }
+              tfoot tr { background:#0f172a; color:white; font-weight:bold; }
+              tfoot td { padding:11px 7px; border:none; color:white; }
+
+              .doc-footer { margin-top:20px; text-align:center; font-size:10px; color:#94a3b8; }
             </style>
           </head>
           <body>
-            <h1>Plan de Amortización</h1>
-            <div class="summary-box">
-              <p><strong>Monto Prestado:</strong> ${moneda} ${formatNum(monto)}</p>
-              <p>
-                <strong>Plazo:</strong> ${plazoMeses} meses &nbsp;|&nbsp;
-                <strong>Tasa (${tipoTasa}):</strong> ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;|&nbsp;
-                <strong>Desgravamen:</strong> ${seguroDesgravamenRateMensual}% mensual
-              </p>
+            <div class="header">
+              <h1>Plan de Amortización</h1>
+              <p>Tasa (${tipoTasa}): ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses} meses</p>
             </div>
+
+            <div class="summary">
+              <div class="card"><div class="lbl">Monto Prestado</div><div class="val">${moneda} ${fn(monto)}</div></div>
+              <div class="card"><div class="lbl">Cuota Mensual</div><div class="val teal">${moneda} ${fn(cuotaMes1)}</div></div>
+              <div class="card"><div class="lbl">Total Intereses</div><div class="val">${moneda} ${fn(totalInteres)}</div></div>
+              <div class="card"><div class="lbl">Total Pagado</div><div class="val">${moneda} ${fn(totalCuotas)}</div></div>
+            </div>
+
             <table>
               <thead>
                 <tr>
-                  <th>Mes</th>
-                  <th>Fecha</th>
-                  <th style="text-align:right;">Capital</th>
-                  <th style="text-align:right;">Interés</th>
-                  <th style="text-align:right;">S. Desgr.</th>
-                  <th style="text-align:right;">Cuota Total</th>
-                  <th style="text-align:right;">Saldo</th>
+                  <th style="text-align:center;">Mes</th>
+                  <th style="text-align:center;">Vcto.</th>
+                  <th>Saldo Capital</th>
+                  <th>Amortización</th>
+                  <th>Interés</th>
+                  <th>Seguro</th>
+                  <th>Cuota Total</th>
                 </tr>
               </thead>
               <tbody>${tableRows}</tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="3" style="text-align:left; padding-left:12px;">TOTALES</td>
+                  <td>${moneda} ${fn(totalAmort)}</td>
+                  <td>${moneda} ${fn(totalInteres)}</td>
+                  <td>${moneda} ${fn(totalSeguro)}</td>
+                  <td>${moneda} ${fn(totalCuotas)}</td>
+                </tr>
+              </tfoot>
             </table>
+
+            <div class="doc-footer">
+              Reporte generado el ${new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' })}
+              · Solo referencial, no constituye oferta crediticia.
+            </div>
           </body>
         </html>
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const pdfName = `${Paths.cache.uri}Simulacion_${monto}_${safeMoneda}.pdf`;
+      const pdfName = `${Paths.cache.uri}Reporte_Simulacion_${monto}_${safeMoneda}.pdf`;
       await moveAsync({ from: uri, to: pdfName });
       await Sharing.shareAsync(pdfName, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
@@ -186,7 +232,7 @@ export default function LoanCalculatorScreen() {
     const primeraCuota = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
     let tPagar = 0, tInteres = 0, tSeguro = 0;
     for (const row of amortizationTable) {
-      if (row.mes === 0) continue; // ignorar fila de desembolso
+      if (row.mes === 0) continue;
       tPagar   += row.cuotaTotal;
       tInteres += row.interesPagado;
       tSeguro  += row.seguroDesgravamen;
@@ -240,10 +286,9 @@ export default function LoanCalculatorScreen() {
                     backgroundColor: isActive ? (isDark ? '#0f766e' : '#0f172a') : (isDark ? '#1e293b' : '#f1f5f9'),
                   }}
                 >
-                  <Text style={{
-                    fontWeight: 'bold', fontSize: 14,
-                    color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
-                  }}>{cur}</Text>
+                  <Text style={{ fontWeight: 'bold', fontSize: 14, color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b') }}>
+                    {cur}
+                  </Text>
                 </Pressable>
               );
             })}
@@ -401,10 +446,7 @@ export default function LoanCalculatorScreen() {
         className="absolute right-6 rounded-full p-2.5 bg-slate-200/60 dark:bg-slate-800"
         style={{ top: insets.top + 12, zIndex: 999, elevation: 5 }}
       >
-        <Ionicons
-          name={isDark ? 'sunny' : 'moon'}
-          size={20} color={isDark ? '#fef08a' : '#334155'}
-        />
+        <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={isDark ? '#fef08a' : '#334155'} />
       </Pressable>
     </View>
   );
