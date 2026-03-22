@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import FileSystem from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -27,12 +28,13 @@ const CURRENCIES = ['S/', '$', '€'];
 export default function LoanCalculatorScreen() {
   const insets = useSafeAreaInsets();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, moneda, amortizationTable, updateParameter, setMoneda, calculateLoan } =
+  const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen, moneda, amortizationTable, updateParameter, setMoneda, calculateLoan } =
     useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
   const [montoText, setMontoText] = useState(monto.toString());
   const [tasaText, setTasaText] = useState(tasaInteres.toString());
+  const [desgravamenText, setDesgravamenText] = useState(tasaDesgravamen.toString());
   const [plazoText, setPlazoText] = useState(plazoMeses.toString());
 
   const handleMonto = (val: string) => {
@@ -48,6 +50,14 @@ export default function LoanCalculatorScreen() {
     setTasaText(clean);
     const num = parseFloat(clean);
     if (!isNaN(num)) updateParameter('tasaInteres', num);
+    setIsCalculated(false);
+  };
+
+  const handleDesgravamen = (val: string) => {
+    const clean = val.replace(/[^0-9.]/g, '');
+    setDesgravamenText(clean);
+    const num = parseFloat(clean);
+    if (!isNaN(num)) updateParameter('tasaDesgravamen', num);
     setIsCalculated(false);
   };
 
@@ -77,13 +87,15 @@ export default function LoanCalculatorScreen() {
         <tr>
           <td style="text-align: center;">${row.mes}</td>
           <td style="text-align: center;">${row.fecha}</td>
-          <td style="text-align: right;">${moneda} ${formatNum(row.cuotaFija)}</td>
           <td style="text-align: right;">${moneda} ${formatNum(row.capitalAmortizado)}</td>
           <td style="text-align: right;">${moneda} ${formatNum(row.interesPagado)}</td>
+          <td style="text-align: right;">${moneda} ${formatNum(row.seguroDesgravamen)}</td>
+          <td style="text-align: right; font-weight: bold;">${moneda} ${formatNum(row.cuotaTotal)}</td>
           <td style="text-align: right; color: #0f766e; font-weight: bold;">${moneda} ${formatNum(row.saldoRemanente)}</td>
         </tr>
       `).join('');
 
+      const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
       const htmlContent = `
         <!DOCTYPE html>
         <html>
@@ -104,18 +116,17 @@ export default function LoanCalculatorScreen() {
             <h1>Plan de Amortización</h1>
             <div class="summary-box">
               <p><strong>Monto Prestado:</strong> ${moneda} ${formatNum(monto)}</p>
-              <p><strong>Plazo:</strong> ${plazoMeses} meses &nbsp; | &nbsp; <strong>Tasa (${tipoTasa}):</strong> ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'}</p>
-              <p><strong>Cuota Mensual:</strong> ${formatCurrency(cuotaFija, moneda)}</p>
-              <p><strong>Total a Pagar:</strong> ${formatCurrency(totalPagar, moneda)} &nbsp; | &nbsp; <strong>Total Interés:</strong> ${formatCurrency(totalInteres, moneda)}</p>
+              <p><strong>Plazo:</strong> ${plazoMeses} meses &nbsp; | &nbsp; <strong>Tasa (${tipoTasa}):</strong> ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp; | &nbsp; <strong>Desgravamen:</strong> ${tasaDesgravamen}%</p>
             </div>
             <table>
               <thead>
                 <tr>
                   <th>Mes</th>
                   <th>Fecha</th>
-                  <th style="text-align: right;">Cuota</th>
                   <th style="text-align: right;">Capital</th>
                   <th style="text-align: right;">Interés</th>
+                  <th style="text-align: right;">S. Desgr.</th>
+                  <th style="text-align: right;">Cuota Total</th>
                   <th style="text-align: right;">Saldo</th>
                 </tr>
               </thead>
@@ -128,30 +139,38 @@ export default function LoanCalculatorScreen() {
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf' });
+
+      // Generar nombre correcto: Simulacion_[MONTO]_[MONEDA].pdf
+      const pdfName = `${FileSystem.cacheDirectory}Simulacion_${monto}_${safeMoneda}.pdf`;
+
+      // Renombrar (Mover) el archivo
+      await FileSystem.moveAsync({
+        from: uri,
+        to: pdfName,
+      });
+
+      // Compartir usando el nuevo nombre
+      await Sharing.shareAsync(pdfName, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
   };
 
-  const { cuotaFija, totalPagar, totalInteres } = useMemo(() => {
-    if (!plazoMeses || plazoMeses <= 0) {
-      return { cuotaFija: 0, totalPagar: 0, totalInteres: 0 };
+  const { cuotaMensualEstimada, totalPagar, totalInteres, totalSeguro } = useMemo(() => {
+    if (amortizationTable.length === 0) {
+      return { cuotaMensualEstimada: 0, totalPagar: 0, totalInteres: 0, totalSeguro: 0 };
     }
-    const rateAsDecimal = tasaInteres / 100;
-    const monthlyRate = esAnual ? rateAsDecimal / 12 : rateAsDecimal;
-    let cuota = 0;
-    if (monthlyRate === 0) {
-      cuota = monto / plazoMeses;
-    } else {
-      const factor = Math.pow(1 + monthlyRate, plazoMeses);
-      cuota = (monto * monthlyRate * factor) / (factor - 1);
+    const primeraCuota = amortizationTable[0].cuotaTotal;
+    let tPagar = 0;
+    let tInteres = 0;
+    let tSeguro = 0;
+    for (const row of amortizationTable) {
+      tPagar += row.cuotaTotal;
+      tInteres += row.interesPagado;
+      tSeguro += row.seguroDesgravamen;
     }
-    if (!Number.isFinite(cuota) || cuota < 0) cuota = 0;
-    const total = cuota * plazoMeses;
-    const interes = Math.max(0, total - monto);
-    return { cuotaFija: cuota, totalPagar: total, totalInteres: interes };
-  }, [monto, tasaInteres, esAnual, plazoMeses]);
+    return { cuotaMensualEstimada: primeraCuota, totalPagar: tPagar, totalInteres: tInteres, totalSeguro: tSeguro };
+  }, [amortizationTable]);
 
   const isDark = colorScheme === 'dark';
 
@@ -290,6 +309,22 @@ export default function LoanCalculatorScreen() {
             <Text className="text-sm font-bold text-slate-950 dark:text-white">Anual</Text>
           </View>
 
+          {/* Tasa de Desgravamen */}
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
+            TASA DE DESGRAVAMEN
+          </Text>
+          <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
+            <TextInput
+              className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              keyboardType="numeric"
+              value={desgravamenText}
+              onChangeText={handleDesgravamen}
+              placeholder="0.00"
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+            />
+            <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
+          </View>
+
           {/* Plazo */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
             PLAZO
@@ -324,28 +359,28 @@ export default function LoanCalculatorScreen() {
           <View className="bg-teal-950 rounded-3xl p-7 mb-8 shadow-xl shadow-teal-900/40">
             {/* Cuota Principal */}
             <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
-              CUOTA MENSUAL ESTIMADA
+              PRIMA MENSUAL ESTIMADA (MES 1)
             </Text>
             <Text className="text-[52px] font-black text-white text-center leading-tight mb-1">
-              {formatCurrency(cuotaFija, moneda)}
+              {formatCurrency(cuotaMensualEstimada, moneda)}
             </Text>
             <Text className="text-teal-400 text-center text-sm font-medium mb-6">
-              por {plazoMeses} meses · tasa {esAnual ? 'anual' : 'mensual'} {tasaInteres}%
+              por {plazoMeses} meses · incluye seguro
             </Text>
 
             {/* Subresumen */}
             <View className="flex-row justify-between mb-8">
               <View className="flex-1 items-center">
-                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL A PAGAR</Text>
+                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
                 <Text className="text-white font-extrabold text-lg" numberOfLines={1}>
                   {formatCurrency(totalPagar, moneda)}
                 </Text>
               </View>
               <View className="w-px bg-teal-800" />
               <View className="flex-1 items-center">
-                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL INTERÉS</Text>
+                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">INTS. Y SEGURO</Text>
                 <Text className="text-teal-300 font-extrabold text-lg" numberOfLines={1}>
-                  {formatCurrency(totalInteres, moneda)}
+                  {formatCurrency(totalInteres + totalSeguro, moneda)}
                 </Text>
               </View>
             </View>

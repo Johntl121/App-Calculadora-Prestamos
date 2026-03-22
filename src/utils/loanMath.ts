@@ -30,7 +30,7 @@ function getPaymentDate(monthsToAdd: number): string {
  * @returns Arreglo con todas las filas de la tabla de amortización
  */
 export function generateAmortizationTable(params: LoanParameters): AmortizationRow[] {
-  const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa } = params;
+  const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen } = params;
 
   // ── Cálculo de la Tasa Efectiva Mensual (TEM) ──────────────────────────────
   let TEM: number;
@@ -66,6 +66,9 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     const interesPagado = balance * TEM;
     let capitalAmortizado = fixedQuota - interesPagado;
 
+    // Seguro de desgravamen mensual basado en el saldo del mes anterior
+    const seguroDesgravamen = balance * (tasaDesgravamen / 100);
+
     // Corrección del último período para eliminar desviaciones por redondeo
     if (i === plazoMeses) {
       capitalAmortizado = balance;
@@ -75,12 +78,16 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     balance -= capitalAmortizado;
     if (balance < 0) balance = 0;
 
+    const cuotaTotal = fixedQuota + seguroDesgravamen;
+
     result.push({
       mes: i,
       fecha: getPaymentDate(i), // mes 1 = hoy + 1 mes
       cuotaFija: fixedQuota,
       interesPagado,
       capitalAmortizado,
+      seguroDesgravamen,
+      cuotaTotal,
       saldoRemanente: balance,
     });
   }

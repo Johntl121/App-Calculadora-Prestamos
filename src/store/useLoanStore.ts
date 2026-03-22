@@ -17,6 +17,7 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
   esAnual: true,
   plazoMeses: 24,
   tipoTasa: 'efectiva',
+  tasaDesgravamen: 0.05,
   moneda: 'S/',
 
   // Tabla de amortización vacía por defecto
@@ -34,8 +35,8 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
 
   // Calcular tabla usando los valores actuales del store
   calculateLoan: () => {
-    const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa } = get();
-    const result = generateAmortizationTable({ monto, tasaInteres, esAnual, plazoMeses, tipoTasa });
+    const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen } = get();
+    const result = generateAmortizationTable({ monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen });
     set({ amortizationTable: result });
   },
 }));

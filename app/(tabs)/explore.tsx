@@ -38,27 +38,31 @@ export default function AmortizationTableScreen() {
         }}
       >
         {/* Mes */}
-        <Text style={{ width: '6%', color: textSub, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }}>
+        <Text style={{ width: '6%', color: textSub, fontWeight: 'bold', fontSize: 9, textAlign: 'center' }}>
           {item.mes}
         </Text>
         {/* Fecha */}
-        <Text style={{ width: '18%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }}>
+        <Text style={{ width: '15%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }}>
           {item.fecha}
         </Text>
-        {/* Cuota */}
-        <Text style={{ width: '18%', color: textMain, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
-          {moneda} {formatNum(item.cuotaFija)}
-        </Text>
         {/* Capital */}
-        <Text style={{ width: '18%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
-          {moneda} {formatNum(item.capitalAmortizado)}
+        <Text style={{ width: '15%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
+          {formatNum(item.capitalAmortizado)}
         </Text>
         {/* Interés */}
-        <Text style={{ width: '22%', color: textSub, fontWeight: '500', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
-          {moneda} {formatNum(item.interesPagado)}
+        <Text style={{ width: '15%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
+          {formatNum(item.interesPagado)}
+        </Text>
+        {/* Seguro */}
+        <Text style={{ width: '14%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
+          {formatNum(item.seguroDesgravamen)}
+        </Text>
+        {/* Total */}
+        <Text style={{ width: '18%', color: textMain, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+          {moneda} {formatNum(item.cuotaTotal)}
         </Text>
         {/* Saldo */}
-        <Text style={{ width: '18%', color: textAccent, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
+        <Text style={{ width: '17%', color: textAccent, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
           {moneda} {formatNum(item.saldoRemanente)}
         </Text>
       </View>
@@ -114,12 +118,13 @@ export default function AmortizationTableScreen() {
             marginTop: 8,
           }}
         >
-          <Text style={{ width: '6%',  color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Mes</Text>
-          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Fecha</Text>
-          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Cuota</Text>
-          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Capital</Text>
-          <Text style={{ width: '22%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Interés</Text>
-          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 9, textAlign: 'center', textTransform: 'uppercase' }}>Saldo</Text>
+          <Text style={{ width: '6%',  color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Mes</Text>
+          <Text style={{ width: '15%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Fecha</Text>
+          <Text style={{ width: '15%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Cap.</Text>
+          <Text style={{ width: '15%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Int.</Text>
+          <Text style={{ width: '14%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Seg.</Text>
+          <Text style={{ width: '18%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Total</Text>
+          <Text style={{ width: '17%', color: '#99f6e4', fontWeight: 'bold', fontSize: 8, textAlign: 'center', textTransform: 'uppercase' }}>Saldo</Text>
         </View>
       )}
 
