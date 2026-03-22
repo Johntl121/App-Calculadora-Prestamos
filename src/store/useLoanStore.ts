@@ -8,35 +8,63 @@ interface LoanStore extends LoanParameters {
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
+  resetStore: () => void;
 }
 
-export const useLoanStore = create<LoanStore>((set, get) => ({
-  // Estado inicial
+const initialState: LoanParameters & { moneda: string } = {
   monto: 25000,
-  tasaInteres: 12.5,
+  tasaInteres: 21.5,        // TEA referencial (~BCP consumo)
   esAnual: true,
   plazoMeses: 24,
   tipoTasa: 'efectiva',
-  tasaDesgravamen: 0.05,
+  /** 0.05% mensual = estándar desgravamen bancos peruanos */
+  seguroDesgravamenRateMensual: 0.05,
+  fechaDesembolso: new Date(),
   moneda: 'S/',
+};
 
-  // Tabla de amortización vacía por defecto
+export const useLoanStore = create<LoanStore>((set, get) => ({
+  // ── Estado inicial ──────────────────────────────────────────────────────────
+  ...initialState,
   amortizationTable: [],
 
-  // Actualizar parámetros del préstamo (incluye tipoTasa)
+  // ── Actualizar un parámetro del préstamo ────────────────────────────────────
   updateParameter: (key, value) => {
-    set({ [key]: value });
+    set((state) => ({ ...state, [key]: value }));
   },
 
-  // Actualizar moneda
+  // ── Actualizar moneda ───────────────────────────────────────────────────────
   setMoneda: (moneda) => {
     set({ moneda });
   },
 
-  // Calcular tabla usando los valores actuales del store
+  // ── Calcular con los valores actuales del store ─────────────────────────────
   calculateLoan: () => {
-    const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen } = get();
-    const result = generateAmortizationTable({ monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen });
+    const {
+      monto,
+      tasaInteres,
+      esAnual,
+      plazoMeses,
+      tipoTasa,
+      seguroDesgravamenRateMensual,
+      fechaDesembolso,
+    } = get();
+
+    const result = generateAmortizationTable({
+      monto,
+      tasaInteres,
+      esAnual,
+      plazoMeses,
+      tipoTasa,
+      seguroDesgravamenRateMensual,
+      fechaDesembolso,
+    });
+
     set({ amortizationTable: result });
+  },
+
+  // ── Resetear todo a valores iniciales ──────────────────────────────────────
+  resetStore: () => {
+    set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [] });
   },
 }));

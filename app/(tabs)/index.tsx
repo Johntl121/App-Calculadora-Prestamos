@@ -1,6 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import FileSystem from 'expo-file-system';
+import { Paths, moveAsync } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
 import { Link } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -28,14 +28,38 @@ const CURRENCIES = ['S/', '$', '€'];
 export default function LoanCalculatorScreen() {
   const insets = useSafeAreaInsets();
   const { colorScheme, toggleColorScheme } = useColorScheme();
-  const { monto, tasaInteres, esAnual, plazoMeses, tipoTasa, tasaDesgravamen, moneda, amortizationTable, updateParameter, setMoneda, calculateLoan } =
-    useLoanStore();
+
+  const {
+    monto,
+    tasaInteres,
+    esAnual,
+    plazoMeses,
+    tipoTasa,
+    seguroDesgravamenRateMensual,
+    moneda,
+    amortizationTable,
+    updateParameter,
+    setMoneda,
+    calculateLoan,
+    resetStore,
+  } = useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
-  const [montoText, setMontoText] = useState(monto.toString());
-  const [tasaText, setTasaText] = useState(tasaInteres.toString());
-  const [desgravamenText, setDesgravamenText] = useState(tasaDesgravamen.toString());
-  const [plazoText, setPlazoText] = useState(plazoMeses.toString());
+  const [montoText, setMontoText]             = useState(monto.toString());
+  const [tasaText,  setTasaText]               = useState(tasaInteres.toString());
+  const [desgravamenText, setDesgravamenText]  = useState(seguroDesgravamenRateMensual.toString());
+  const [plazoText, setPlazoText]             = useState(plazoMeses.toString());
+
+  // Sincronizar inputs locales cuando el store cambia (ej: botón Reset)
+  React.useEffect(() => {
+    setMontoText(monto.toString());
+    setTasaText(tasaInteres.toString());
+    setDesgravamenText(seguroDesgravamenRateMensual.toString());
+    setPlazoText(plazoMeses.toString());
+    if (amortizationTable.length === 0) setIsCalculated(false);
+  }, [monto, tasaInteres, seguroDesgravamenRateMensual, plazoMeses, amortizationTable]);
+
+  /* ── Handlers ─────────────────────────────────────────────────────────────── */
 
   const handleMonto = (val: string) => {
     const clean = val.replace(/[^0-9.]/g, '');
@@ -57,7 +81,7 @@ export default function LoanCalculatorScreen() {
     const clean = val.replace(/[^0-9.]/g, '');
     setDesgravamenText(clean);
     const num = parseFloat(clean);
-    if (!isNaN(num)) updateParameter('tasaDesgravamen', num);
+    if (!isNaN(num)) updateParameter('seguroDesgravamenRateMensual', num);
     setIsCalculated(false);
   };
 
@@ -79,128 +103,131 @@ export default function LoanCalculatorScreen() {
     setIsCalculated(true);
   };
 
+  /* ── PDF ──────────────────────────────────────────────────────────────────── */
+
   const generatePDF = async () => {
     try {
-      const formatNum = (value: number) => value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      
+      const formatNum = (value: number) =>
+        value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
       const tableRows = amortizationTable.map((row) => `
         <tr>
-          <td style="text-align: center;">${row.mes}</td>
-          <td style="text-align: center;">${row.fecha}</td>
-          <td style="text-align: right;">${moneda} ${formatNum(row.capitalAmortizado)}</td>
-          <td style="text-align: right;">${moneda} ${formatNum(row.interesPagado)}</td>
-          <td style="text-align: right;">${moneda} ${formatNum(row.seguroDesgravamen)}</td>
-          <td style="text-align: right; font-weight: bold;">${moneda} ${formatNum(row.cuotaTotal)}</td>
-          <td style="text-align: right; color: #0f766e; font-weight: bold;">${moneda} ${formatNum(row.saldoRemanente)}</td>
+          <td style="text-align:center;">${row.mes}</td>
+          <td style="text-align:center;">${row.fecha}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.capitalAmortizado)}`}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.interesPagado)}`}</td>
+          <td style="text-align:right;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.seguroDesgravamen)}`}</td>
+          <td style="text-align:right; font-weight:bold;">${row.mes === 0 ? '-' : `${moneda} ${formatNum(row.cuotaTotal)}`}</td>
+          <td style="text-align:right; color:#0f766e; font-weight:bold;">${moneda} ${formatNum(row.saldoRemanente)}</td>
         </tr>
       `).join('');
 
       const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
+
       const htmlContent = `
         <!DOCTYPE html>
         <html>
           <head>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+            <meta name="viewport" content="width=device-width,initial-scale=1.0" />
             <style>
-              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
-              h1 { color: #0f766e; text-align: center; margin-bottom: 5px; font-size: 24px; }
-              .summary-box { background-color: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-              .summary-box p { margin: 6px 0; font-size: 14px; }
-              table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-              th, td { padding: 10px 5px; border-bottom: 1px solid #e2e8f0; }
-              th { background-color: #0f766e; color: #ffffff; text-transform: uppercase; font-size: 10px; }
-              tr:nth-child(even) { background-color: #f8fafc; }
+              body { font-family:'Helvetica Neue',Helvetica,Arial,sans-serif; padding:20px; color:#333; }
+              h1   { color:#0f766e; text-align:center; margin-bottom:5px; font-size:24px; }
+              .summary-box { background:#f1f5f9; padding:15px; border-radius:8px; margin-bottom:20px; text-align:center; }
+              .summary-box p { margin:6px 0; font-size:14px; }
+              table { width:100%; border-collapse:collapse; margin-top:10px; font-size:12px; }
+              th, td { padding:10px 5px; border-bottom:1px solid #e2e8f0; }
+              th { background-color:#0f766e; color:#fff; text-transform:uppercase; font-size:10px; }
+              tr:nth-child(even) { background:#f8fafc; }
             </style>
           </head>
           <body>
             <h1>Plan de Amortización</h1>
             <div class="summary-box">
               <p><strong>Monto Prestado:</strong> ${moneda} ${formatNum(monto)}</p>
-              <p><strong>Plazo:</strong> ${plazoMeses} meses &nbsp; | &nbsp; <strong>Tasa (${tipoTasa}):</strong> ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp; | &nbsp; <strong>Desgravamen:</strong> ${tasaDesgravamen}%</p>
+              <p>
+                <strong>Plazo:</strong> ${plazoMeses} meses &nbsp;|&nbsp;
+                <strong>Tasa (${tipoTasa}):</strong> ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;|&nbsp;
+                <strong>Desgravamen:</strong> ${seguroDesgravamenRateMensual}% mensual
+              </p>
             </div>
             <table>
               <thead>
                 <tr>
                   <th>Mes</th>
                   <th>Fecha</th>
-                  <th style="text-align: right;">Capital</th>
-                  <th style="text-align: right;">Interés</th>
-                  <th style="text-align: right;">S. Desgr.</th>
-                  <th style="text-align: right;">Cuota Total</th>
-                  <th style="text-align: right;">Saldo</th>
+                  <th style="text-align:right;">Capital</th>
+                  <th style="text-align:right;">Interés</th>
+                  <th style="text-align:right;">S. Desgr.</th>
+                  <th style="text-align:right;">Cuota Total</th>
+                  <th style="text-align:right;">Saldo</th>
                 </tr>
               </thead>
-              <tbody>
-                ${tableRows}
-              </tbody>
+              <tbody>${tableRows}</tbody>
             </table>
           </body>
         </html>
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-
-      // Generar nombre correcto: Simulacion_[MONTO]_[MONEDA].pdf
-      const pdfName = `${FileSystem.cacheDirectory}Simulacion_${monto}_${safeMoneda}.pdf`;
-
-      // Renombrar (Mover) el archivo
-      await FileSystem.moveAsync({
-        from: uri,
-        to: pdfName,
-      });
-
-      // Compartir usando el nuevo nombre
+      const pdfName = `${Paths.cache.uri}Simulacion_${monto}_${safeMoneda}.pdf`;
+      await moveAsync({ from: uri, to: pdfName });
       await Sharing.shareAsync(pdfName, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
   };
 
+  /* ── Totales (useMemo) ────────────────────────────────────────────────────── */
+
   const { cuotaMensualEstimada, totalPagar, totalInteres, totalSeguro } = useMemo(() => {
-    if (amortizationTable.length === 0) {
+    if (amortizationTable.length === 0)
       return { cuotaMensualEstimada: 0, totalPagar: 0, totalInteres: 0, totalSeguro: 0 };
-    }
-    const primeraCuota = amortizationTable[0].cuotaTotal;
-    let tPagar = 0;
-    let tInteres = 0;
-    let tSeguro = 0;
+
+    const primeraCuota = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
+    let tPagar = 0, tInteres = 0, tSeguro = 0;
     for (const row of amortizationTable) {
-      tPagar += row.cuotaTotal;
+      if (row.mes === 0) continue; // ignorar fila de desembolso
+      tPagar   += row.cuotaTotal;
       tInteres += row.interesPagado;
-      tSeguro += row.seguroDesgravamen;
+      tSeguro  += row.seguroDesgravamen;
     }
     return { cuotaMensualEstimada: primeraCuota, totalPagar: tPagar, totalInteres: tInteres, totalSeguro: tSeguro };
   }, [amortizationTable]);
 
   const isDark = colorScheme === 'dark';
 
+  /* ── Render ───────────────────────────────────────────────────────────────── */
   return (
-    <View
-      className="flex-1 bg-slate-100 dark:bg-slate-950"
-      style={{ paddingTop: insets.top }}
-    >
+    <View className="flex-1 bg-slate-100 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
+
       <ScrollView
         className="flex-1 px-5 pt-6 pb-24"
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* === ENCABEZADO === */}
-        <View className="mb-6 mt-2">
-          <Text className="text-2xl font-black text-slate-950 dark:text-white tracking-tight">
-            Simulador de Préstamo
-          </Text>
-          <Text className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Ingresa los datos para calcular tu cuota
-          </Text>
+        {/* ── ENCABEZADO ─────────────────────────────────────────────────── */}
+        <View className="flex-row items-center justify-between mb-6 mt-2">
+          <View>
+            <Text className="text-2xl font-black text-slate-950 dark:text-white tracking-tight">
+              Simulador de Préstamo
+            </Text>
+            <Text className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+              Ingresa los datos para calcular tu cuota
+            </Text>
+          </View>
+          <Pressable
+            onPress={resetStore}
+            className="rounded-full p-2.5 bg-slate-200 dark:bg-slate-800"
+          >
+            <Ionicons name="refresh" size={20} color={isDark ? '#94a3b8' : '#334155'} />
+          </Pressable>
         </View>
 
-        {/* === SECCIÓN 1: FORMULARIO === */}
+        {/* ── FORMULARIO ─────────────────────────────────────────────────── */}
         <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5">
 
-          {/* Selector de Moneda */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">
-            MONEDA
-          </Text>
+          {/* Moneda */}
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">MONEDA</Text>
           <View className="flex-row mb-6" style={{ gap: 8 }}>
             {CURRENCIES.map((cur) => {
               const isActive = moneda === cur;
@@ -209,141 +236,100 @@ export default function LoanCalculatorScreen() {
                   key={cur}
                   onPress={() => setMoneda(cur)}
                   style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 20,
-                    borderRadius: 999,
-                    backgroundColor: isActive
-                      ? (isDark ? '#0f766e' : '#0f172a')
-                      : (isDark ? '#1e293b' : '#f1f5f9'),
+                    paddingVertical: 10, paddingHorizontal: 20, borderRadius: 999,
+                    backgroundColor: isActive ? (isDark ? '#0f766e' : '#0f172a') : (isDark ? '#1e293b' : '#f1f5f9'),
                   }}
                 >
                   <Text style={{
-                    fontWeight: 'bold',
-                    fontSize: 14,
+                    fontWeight: 'bold', fontSize: 14,
                     color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
-                  }}>
-                    {cur}
-                  </Text>
+                  }}>{cur}</Text>
                 </Pressable>
               );
             })}
           </View>
 
           {/* Monto */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
-            MONTO DEL PRÉSTAMO
-          </Text>
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MONTO DEL PRÉSTAMO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 mr-2">{moneda}</Text>
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric"
-              value={montoText}
-              onChangeText={handleMonto}
-              placeholder="0.00"
-              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" value={montoText} onChangeText={handleMonto}
+              placeholder="0.00" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
           </View>
 
           {/* Tasa de Interés */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
-            TASA DE INTERÉS
-          </Text>
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">TASA DE INTERÉS</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric"
-              value={tasaText}
-              onChangeText={handleTasa}
-              placeholder="0.00"
-              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" value={tasaText} onChangeText={handleTasa}
+              placeholder="0.00" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
 
-          {/* Selector Efectiva / Nominal */}
+          {/* Tipo Tasa: Efectiva / Nominal */}
           <View className="flex-row mb-4" style={{ gap: 8 }}>
-            <Pressable
-              onPress={() => updateParameter('tipoTasa', 'efectiva')}
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                borderRadius: 12,
-                alignItems: 'center',
-                backgroundColor: tipoTasa === 'efectiva'
-                  ? (isDark ? '#0f766e' : '#0f172a')
-                  : (isDark ? '#1e293b' : '#f1f5f9'),
-              }}
-            >
-              <Text style={{ fontWeight: 'bold', fontSize: 13, color: tipoTasa === 'efectiva' ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b') }}>
-                T. Efectiva
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => updateParameter('tipoTasa', 'nominal')}
-              style={{
-                flex: 1,
-                paddingVertical: 10,
-                borderRadius: 12,
-                alignItems: 'center',
-                backgroundColor: tipoTasa === 'nominal'
-                  ? (isDark ? '#0f766e' : '#0f172a')
-                  : (isDark ? '#1e293b' : '#f1f5f9'),
-              }}
-            >
-              <Text style={{ fontWeight: 'bold', fontSize: 13, color: tipoTasa === 'nominal' ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b') }}>
-                T. Nominal
-              </Text>
-            </Pressable>
+            {(['efectiva', 'nominal'] as const).map((tipo) => (
+              <Pressable
+                key={tipo}
+                onPress={() => updateParameter('tipoTasa', tipo)}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center',
+                  backgroundColor: tipoTasa === tipo
+                    ? (isDark ? '#0f766e' : '#0f172a')
+                    : (isDark ? '#1e293b' : '#f1f5f9'),
+                }}
+              >
+                <Text style={{
+                  fontWeight: 'bold', fontSize: 13,
+                  color: tipoTasa === tipo ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                }}>
+                  T. {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
+                </Text>
+              </Pressable>
+            ))}
           </View>
 
           {/* Toggle Mensual / Anual */}
           <View className="flex-row items-center justify-center mb-5" style={{ gap: 12 }}>
             <Text className="text-sm font-bold text-slate-500 dark:text-slate-400">Mensual</Text>
-            <Switch
-              value={esAnual}
-              onValueChange={handleSwitchTasa}
+            <Switch value={esAnual} onValueChange={handleSwitchTasa}
               trackColor={{ false: '#94a3b8', true: '#0f766e' }}
               thumbColor={esAnual ? '#ccfbf1' : '#f8fafc'}
             />
             <Text className="text-sm font-bold text-slate-950 dark:text-white">Anual</Text>
           </View>
 
-          {/* Tasa de Desgravamen */}
+          {/* Seguro de Desgravamen */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
-            TASA DE DESGRAVAMEN
+            SEGURO DESGRAVAMEN (% MENSUAL)
           </Text>
-          <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
+          <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric"
-              value={desgravamenText}
-              onChangeText={handleDesgravamen}
-              placeholder="0.00"
-              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" value={desgravamenText} onChangeText={handleDesgravamen}
+              placeholder="0.05" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
 
           {/* Plazo */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
-            PLAZO
-          </Text>
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">PLAZO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric"
-              maxLength={3}
-              value={plazoText}
-              onChangeText={handlePlazo}
-              placeholder="0"
-              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" maxLength={3} value={plazoText} onChangeText={handlePlazo}
+              placeholder="0" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 ml-2">meses</Text>
           </View>
         </View>
 
-        {/* === SECCIÓN 2: BOTÓN CALCULAR === */}
+        {/* ── BOTÓN CALCULAR ─────────────────────────────────────────────── */}
         <Pressable
           onPress={handleCalcular}
           className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
@@ -354,21 +340,19 @@ export default function LoanCalculatorScreen() {
           </Text>
         </Pressable>
 
-        {/* === SECCIÓN 3: RESULTADOS (solo si isCalculated) === */}
+        {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
         {isCalculated && (
           <View className="bg-teal-950 rounded-3xl p-7 mb-8 shadow-xl shadow-teal-900/40">
-            {/* Cuota Principal */}
             <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
-              PRIMA MENSUAL ESTIMADA (MES 1)
+              CUOTA MENSUAL FIJA
             </Text>
             <Text className="text-[52px] font-black text-white text-center leading-tight mb-1">
               {formatCurrency(cuotaMensualEstimada, moneda)}
             </Text>
             <Text className="text-teal-400 text-center text-sm font-medium mb-6">
-              por {plazoMeses} meses · incluye seguro
+              por {plazoMeses} meses · incluye seguro desgravamen
             </Text>
 
-            {/* Subresumen */}
             <View className="flex-row justify-between mb-8">
               <View className="flex-1 items-center">
                 <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
@@ -385,7 +369,6 @@ export default function LoanCalculatorScreen() {
               </View>
             </View>
 
-            {/* Botones de Acción */}
             <Link href="/explore" asChild onPress={() => {}}>
               <Pressable
                 className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
@@ -412,7 +395,7 @@ export default function LoanCalculatorScreen() {
         )}
       </ScrollView>
 
-      {/* Botón de Modo Oscuro */}
+      {/* Botón Modo Oscuro */}
       <Pressable
         onPress={toggleColorScheme}
         className="absolute right-6 rounded-full p-2.5 bg-slate-200/60 dark:bg-slate-800"
@@ -420,8 +403,7 @@ export default function LoanCalculatorScreen() {
       >
         <Ionicons
           name={isDark ? 'sunny' : 'moon'}
-          size={20}
-          color={isDark ? '#fef08a' : '#334155'}
+          size={20} color={isDark ? '#fef08a' : '#334155'}
         />
       </Pressable>
     </View>

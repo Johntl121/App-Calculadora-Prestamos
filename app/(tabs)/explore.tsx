@@ -47,19 +47,19 @@ export default function AmortizationTableScreen() {
         </Text>
         {/* Capital */}
         <Text style={{ width: '15%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
-          {formatNum(item.capitalAmortizado)}
+          {item.mes === 0 ? '-' : formatNum(item.capitalAmortizado)}
         </Text>
         {/* Interés */}
         <Text style={{ width: '15%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
-          {formatNum(item.interesPagado)}
+          {item.mes === 0 ? '-' : formatNum(item.interesPagado)}
         </Text>
         {/* Seguro */}
         <Text style={{ width: '14%', color: textSub, fontWeight: '500', fontSize: 9, textAlign: 'center' }} numberOfLines={1}>
-          {formatNum(item.seguroDesgravamen)}
+          {item.mes === 0 ? '-' : formatNum(item.seguroDesgravamen)}
         </Text>
         {/* Total */}
         <Text style={{ width: '18%', color: textMain, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
-          {moneda} {formatNum(item.cuotaTotal)}
+          {item.mes === 0 ? '-' : `${moneda} ${formatNum(item.cuotaTotal)}`}
         </Text>
         {/* Saldo */}
         <Text style={{ width: '17%', color: textAccent, fontWeight: 'bold', fontSize: 10, textAlign: 'center' }} numberOfLines={1}>
