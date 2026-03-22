@@ -2,14 +2,12 @@
  * Parámetros de entrada del préstamo ingresados por el usuario.
  */
 export interface LoanParameters {
-  monto: number;
-  tasaInteres: number;   // TEA o TNA en porcentaje (ej: 21.5 para 21.5%)
-  esAnual: boolean;       // true = tasa anual, false = tasa ya es mensual
-  plazoMeses: number;
+  monto: string;
+  tasaInteres: string;   // TEA o TNA en porcentaje
+  esAnual: boolean;
+  plazoMeses: string;
   tipoTasa: 'efectiva' | 'nominal';
-  /** Tasa mensual del Seguro de Desgravamen en porcentaje (ej: 0.05 para 0.05%) */
-  seguroDesgravamenRateMensual: number;
-  /** Fecha de desembolso del préstamo */
+  seguroDesgravamenRateMensual: string;
   fechaDesembolso: Date;
 }
 

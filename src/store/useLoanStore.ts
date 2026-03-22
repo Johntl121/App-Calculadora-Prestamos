@@ -11,34 +11,30 @@ interface LoanStore extends LoanParameters {
   resetStore: () => void;
 }
 
+// Variables inicialmente vacías para que el TextInput actúe con placeholder.
 const initialState: LoanParameters & { moneda: string } = {
-  monto: 25000,
-  tasaInteres: 21.5,        // TEA referencial (~BCP consumo)
+  monto: '',
+  tasaInteres: '',
   esAnual: true,
-  plazoMeses: 24,
+  plazoMeses: '',
   tipoTasa: 'efectiva',
-  /** 0.05% mensual = estándar desgravamen bancos peruanos */
-  seguroDesgravamenRateMensual: 0.05,
+  seguroDesgravamenRateMensual: '',
   fechaDesembolso: new Date(),
   moneda: 'S/',
 };
 
 export const useLoanStore = create<LoanStore>((set, get) => ({
-  // ── Estado inicial ──────────────────────────────────────────────────────────
   ...initialState,
   amortizationTable: [],
 
-  // ── Actualizar un parámetro del préstamo ────────────────────────────────────
   updateParameter: (key, value) => {
     set((state) => ({ ...state, [key]: value }));
   },
 
-  // ── Actualizar moneda ───────────────────────────────────────────────────────
   setMoneda: (moneda) => {
     set({ moneda });
   },
 
-  // ── Calcular con los valores actuales del store ─────────────────────────────
   calculateLoan: () => {
     const {
       monto,
@@ -63,7 +59,6 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
     set({ amortizationTable: result });
   },
 
-  // ── Resetear todo a valores iniciales ──────────────────────────────────────
   resetStore: () => {
     set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [] });
   },

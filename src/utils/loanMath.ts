@@ -24,16 +24,6 @@ function getPaymentDate(baseDate: Date, monthsToAdd: number): string {
 /**
  * Genera la tabla de amortización (Cronograma de Pagos) según la metodología
  * bancaria peruana (BCP, Interbank, etc.) usando Tasa Combinada (Técnica Ninja).
- *
- * LÓGICA CLAVE:
- *   - Se crea una TasaCombinadaJ = TEM + TSD para calcular la cuota con la fórmula
- *     de anualidad. Esto garantiza que la CUOTA TOTAL sea perfectamente fija
- *     cada mes, porque el seguro también está "dentro" de la tasa.
- *   - Cada mes se desglosa: Interés = Saldo × TEM, Seguro = Saldo × TSD,
- *     Amortización = Cuota − Interés − Seguro.
- *
- * @param params - Parámetros del préstamo
- * @returns Array de filas del cronograma (incluyendo fila 0 = desembolso)
  */
 export function generateAmortizationTable(params: LoanParameters): AmortizationRow[] {
   const {
@@ -46,43 +36,44 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     fechaDesembolso,
   } = params;
 
-  // ── 1. Calcular TEM (Tasa Efectiva Mensual de Interés) ─────────────────────
+  const numMonto = parseFloat(monto) || 0;
+  const numTasa = parseFloat(tasaInteres) || 0;
+  const numPlazo = parseInt(plazoMeses, 10) || 0;
+  const numDesgravamen = parseFloat(seguroDesgravamenRateMensual) || 0;
+
+  if (numMonto <= 0 || numPlazo <= 0) return []; // Seguro contra inputs incompletos.
+
+  // 1. Calcular TEM
   let TEM: number;
   if (!esAnual) {
-    // Usuario ingresó tasa mensual directamente
-    TEM = tasaInteres / 100;
+    TEM = numTasa / 100;
   } else {
     if (tipoTasa === 'nominal') {
-      // TNA → TEM por división simple (capitalización mensual)
-      TEM = (tasaInteres / 100) / 12;
+      TEM = (numTasa / 100) / 12;
     } else {
-      // TEA → TEM por fórmula compuesta (estándar bancario peruano)
-      TEM = Math.pow(1 + (tasaInteres / 100), 1 / 12) - 1;
+      TEM = Math.pow(1 + (numTasa / 100), 1 / 12) - 1;
     }
   }
 
-  // ── 2. Tasa Seguro Desgravamen Mensual (TSD) ───────────────────────────────
-  const TSD = seguroDesgravamenRateMensual / 100;
+  // 2. Tasa Seguro Desgravamen Mensual
+  const TSD = numDesgravamen / 100;
 
-  // ── 3. Tasa Combinada J = TEM + TSD ────────────────────────────────────────
-  // Esta es la "Técnica Ninja": al incluir el seguro en la tasa de la fórmula
-  // de anualidad, la CUOTA TOTAL resultante es perfectamente fija cada mes.
+  // 3. Tasa Combinada J = TEM + TSD
   const J = TEM + TSD;
 
-  // ── 4. Cuota Total Fija (Sistema Francés con Tasa Combinada) ───────────────
+  // 4. Cuota Total Fija (Sistema Francés con Tasa Combinada)
   let cuotaTotalFija: number;
   if (J === 0) {
-    cuotaTotalFija = monto / plazoMeses;
+    cuotaTotalFija = numMonto / numPlazo;
   } else {
-    const factor = Math.pow(1 + J, plazoMeses);
-    cuotaTotalFija = (monto * J * factor) / (factor - 1);
+    const factor = Math.pow(1 + J, numPlazo);
+    cuotaTotalFija = (numMonto * J * factor) / (factor - 1);
   }
 
-  // ── 5. Generar el cronograma mes a mes ─────────────────────────────────────
-  let saldo = monto;
+  // 5. Cronograma
+  let saldo = numMonto;
   const result: AmortizationRow[] = [];
 
-  // Fila 0: Desembolso (fecha de hoy, sin pago)
   result.push({
     mes: 0,
     fecha: getPaymentDate(fechaDesembolso, 0),
@@ -90,25 +81,23 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     interesPagado: 0,
     seguroDesgravamen: 0,
     capitalAmortizado: 0,
-    saldoRemanente: monto,
+    saldoRemanente: numMonto,
   });
 
-  for (let i = 1; i <= plazoMeses; i++) {
-    // Desglose mensual sobre el saldo pendiente
+  for (let i = 1; i <= numPlazo; i++) {
     const interesMes  = saldo * TEM;
     const seguroMes   = saldo * TSD;
     let   amortMes    = cuotaTotalFija - interesMes - seguroMes;
 
-    // Corrección del último período para cerrar la deuda exactamente en 0
-    if (i === plazoMeses) {
-      amortMes = saldo; // cancela lo que quede, sin importar decimales
+    if (i === numPlazo) {
+      amortMes = saldo; 
     }
 
     saldo -= amortMes;
-    if (saldo < 0) saldo = 0; // guardia de seguridad
+    if (saldo < 0) saldo = 0; 
 
-    const cuotaRealMes = i === plazoMeses
-      ? amortMes + interesMes + seguroMes // ajustada para el último mes
+    const cuotaRealMes = i === numPlazo
+      ? amortMes + interesMes + seguroMes 
       : cuotaTotalFija;
 
     result.push({

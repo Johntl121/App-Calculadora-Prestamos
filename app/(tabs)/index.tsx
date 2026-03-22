@@ -44,52 +44,36 @@ export default function LoanCalculatorScreen() {
     resetStore,
   } = useLoanStore();
 
-  const [isCalculated, setIsCalculated]           = useState(false);
-  const [montoText, setMontoText]                 = useState(monto.toString());
-  const [tasaText, setTasaText]                   = useState(tasaInteres.toString());
-  const [desgravamenText, setDesgravamenText]     = useState(seguroDesgravamenRateMensual.toString());
-  const [plazoText, setPlazoText]                 = useState(plazoMeses.toString());
+  const [isCalculated, setIsCalculated] = useState(false);
 
-  // Sincronizar inputs locales cuando el store cambia (ej: botón Reset)
+  // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
-    setMontoText(monto.toString());
-    setTasaText(tasaInteres.toString());
-    setDesgravamenText(seguroDesgravamenRateMensual.toString());
-    setPlazoText(plazoMeses.toString());
     if (amortizationTable.length === 0) setIsCalculated(false);
-  }, [monto, tasaInteres, seguroDesgravamenRateMensual, plazoMeses, amortizationTable]);
+  }, [amortizationTable]);
 
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
 
   const handleMonto = (val: string) => {
     const clean = val.replace(/[^0-9.]/g, '');
-    setMontoText(clean);
-    const num = parseFloat(clean);
-    if (!isNaN(num)) updateParameter('monto', num);
+    updateParameter('monto', clean);
     setIsCalculated(false);
   };
 
   const handleTasa = (val: string) => {
     const clean = val.replace(/[^0-9.]/g, '');
-    setTasaText(clean);
-    const num = parseFloat(clean);
-    if (!isNaN(num)) updateParameter('tasaInteres', num);
+    updateParameter('tasaInteres', clean);
     setIsCalculated(false);
   };
 
   const handleDesgravamen = (val: string) => {
     const clean = val.replace(/[^0-9.]/g, '');
-    setDesgravamenText(clean);
-    const num = parseFloat(clean);
-    if (!isNaN(num)) updateParameter('seguroDesgravamenRateMensual', num);
+    updateParameter('seguroDesgravamenRateMensual', clean);
     setIsCalculated(false);
   };
 
   const handlePlazo = (val: string) => {
     const clean = val.replace(/[^0-9]/g, '');
-    setPlazoText(clean);
-    const num = parseInt(clean, 10);
-    if (!isNaN(num) && num > 0) updateParameter('plazoMeses', num);
+    updateParameter('plazoMeses', clean);
     setIsCalculated(false);
   };
 
@@ -110,7 +94,6 @@ export default function LoanCalculatorScreen() {
       const fn = (v: number) =>
         v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-      // Acumuladores para el pie de tabla
       let totalAmort = 0, totalInteres = 0, totalSeguro = 0, totalCuotas = 0;
       amortizationTable.forEach((r) => {
         if (r.mes === 0) return;
@@ -120,7 +103,6 @@ export default function LoanCalculatorScreen() {
         totalCuotas  += r.cuotaTotal;
       });
 
-      // Orden BCP: Mes | Vcto. | Saldo Capital | Amortización | Interés | Seguro | Cuota
       const tableRows = amortizationTable.map((row) => `
         <tr class="${row.mes === 0 ? 'row-desembolso' : (row.mes % 2 === 0 ? 'row-even' : '')}">
           <td style="text-align:center;">${row.mes}</td>
@@ -135,6 +117,7 @@ export default function LoanCalculatorScreen() {
 
       const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
       const cuotaMes1  = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
+      const numMonto = parseFloat(monto) || 0;
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -172,11 +155,11 @@ export default function LoanCalculatorScreen() {
           <body>
             <div class="header">
               <h1>Plan de Amortización</h1>
-              <p>Tasa (${tipoTasa}): ${tasaInteres}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses} meses</p>
+              <p>Tasa (${tipoTasa}): ${tasaInteres || 0}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses || 0} meses</p>
             </div>
 
             <div class="summary">
-              <div class="card"><div class="lbl">Monto Prestado</div><div class="val">${moneda} ${fn(monto)}</div></div>
+              <div class="card"><div class="lbl">Monto Prestado</div><div class="val">${moneda} ${fn(numMonto)}</div></div>
               <div class="card"><div class="lbl">Cuota Mensual</div><div class="val teal">${moneda} ${fn(cuotaMes1)}</div></div>
               <div class="card"><div class="lbl">Total Intereses</div><div class="val">${moneda} ${fn(totalInteres)}</div></div>
               <div class="card"><div class="lbl">Total Pagado</div><div class="val">${moneda} ${fn(totalCuotas)}</div></div>
@@ -215,7 +198,7 @@ export default function LoanCalculatorScreen() {
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const pdfName = `${Paths.cache.uri}Reporte_Simulacion_${monto}_${safeMoneda}.pdf`;
+      const pdfName = `${Paths.cache.uri}Reporte_Simulacion_${numMonto}_${safeMoneda}.pdf`;
       await moveAsync({ from: uri, to: pdfName });
       await Sharing.shareAsync(pdfName, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
@@ -300,8 +283,8 @@ export default function LoanCalculatorScreen() {
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 mr-2">{moneda}</Text>
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={montoText} onChangeText={handleMonto}
-              placeholder="0.00" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" value={monto} onChangeText={handleMonto}
+              placeholder="25,000" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
           </View>
 
@@ -310,8 +293,8 @@ export default function LoanCalculatorScreen() {
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={tasaText} onChangeText={handleTasa}
-              placeholder="0.00" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" value={tasaInteres} onChangeText={handleTasa}
+              placeholder="21.50" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
@@ -356,7 +339,7 @@ export default function LoanCalculatorScreen() {
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={desgravamenText} onChangeText={handleDesgravamen}
+              keyboardType="numeric" value={seguroDesgravamenRateMensual} onChangeText={handleDesgravamen}
               placeholder="0.05" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
@@ -367,8 +350,8 @@ export default function LoanCalculatorScreen() {
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4">
             <TextInput
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" maxLength={3} value={plazoText} onChangeText={handlePlazo}
-              placeholder="0" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" maxLength={3} value={plazoMeses} onChangeText={handlePlazo}
+              placeholder="24" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 ml-2">meses</Text>
           </View>
@@ -386,12 +369,12 @@ export default function LoanCalculatorScreen() {
         </Pressable>
 
         {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
-        {isCalculated && (
+        {isCalculated && amortizationTable.length > 0 && (
           <View className="bg-teal-950 rounded-3xl p-7 mb-8 shadow-xl shadow-teal-900/40">
             <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
               CUOTA MENSUAL FIJA
             </Text>
-            <Text className="text-[52px] font-black text-white text-center leading-tight mb-1">
+            <Text className="text-[52px] font-black text-white text-center leading-tight mb-1" numberOfLines={1}>
               {formatCurrency(cuotaMensualEstimada, moneda)}
             </Text>
             <Text className="text-teal-400 text-center text-sm font-medium mb-6">
