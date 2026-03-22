@@ -5,14 +5,23 @@ import { generateAmortizationTable } from '../utils/loanMath';
 interface LoanStore extends LoanParameters {
   moneda: string;
   amortizationTable: AmortizationRow[];
+  bancoSeleccionado: string | null;  // NUEVO
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
   resetStore: () => void;
+  applyBankPreset: (bancoId: string) => void;  // NUEVO
 }
 
+const BANK_PRESETS: Record<string, string> = {
+  'BCP': '0.122',
+  'BBVA': '0.085',
+  'Interbank': '0.090',
+  'Scotiabank': '0.105',
+};
+
 // Variables inicialmente vacías para que el TextInput actúe con placeholder.
-const initialState: LoanParameters & { moneda: string } = {
+const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string | null } = {
   monto: '',
   tasaInteres: '',
   esAnual: true,
@@ -21,6 +30,7 @@ const initialState: LoanParameters & { moneda: string } = {
   seguroDesgravamenRateMensual: '',
   fechaDesembolso: new Date(),
   moneda: 'S/',
+  bancoSeleccionado: null,
 };
 
 export const useLoanStore = create<LoanStore>((set, get) => ({
@@ -28,7 +38,13 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
   amortizationTable: [],
 
   updateParameter: (key, value) => {
-    set((state) => ({ ...state, [key]: value }));
+    set((state) => {
+      const updates: any = { [key]: value };
+      if (key === 'seguroDesgravamenRateMensual') {
+        updates.bancoSeleccionado = null; // Quitar preset si el usuario escribe a mano
+      }
+      return { ...state, ...updates };
+    });
   },
 
   setMoneda: (moneda) => {
@@ -61,5 +77,12 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
 
   resetStore: () => {
     set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [] });
+  },
+
+  applyBankPreset: (bancoId) => {
+    const rate = BANK_PRESETS[bancoId];
+    if (rate) {
+      set({ bancoSeleccionado: bancoId, seguroDesgravamenRateMensual: rate });
+    }
   },
 }));

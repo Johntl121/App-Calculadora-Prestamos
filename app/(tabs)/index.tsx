@@ -38,10 +38,12 @@ export default function LoanCalculatorScreen() {
     seguroDesgravamenRateMensual,
     moneda,
     amortizationTable,
+    bancoSeleccionado,
     updateParameter,
     setMoneda,
     calculateLoan,
     resetStore,
+    applyBankPreset,
   } = useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
@@ -331,6 +333,46 @@ export default function LoanCalculatorScreen() {
             />
             <Text className="text-sm font-bold text-slate-950 dark:text-white">Anual</Text>
           </View>
+
+          {/* Entidad Bancaria */}
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3" style={{ marginTop: 8 }}>
+            ENTIDAD BANCARIA (AUTOCOMPLETAR SEGURO)
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="mb-6"
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {['BCP', 'BBVA', 'Interbank', 'Scotiabank'].map((banco) => {
+              const isActive = bancoSeleccionado === banco;
+              return (
+                <Pressable
+                  key={banco}
+                  onPress={() => {
+                    applyBankPreset(banco);
+                    setIsCalculated(false);
+                  }}
+                  style={{
+                    paddingVertical: 10,
+                    paddingHorizontal: 20,
+                    borderRadius: 999,
+                    backgroundColor: isActive
+                      ? (isDark ? '#0f766e' : '#0f172a')
+                      : (isDark ? '#1e293b' : '#f1f5f9'),
+                  }}
+                >
+                  <Text style={{
+                    fontWeight: 'bold',
+                    fontSize: 14,
+                    color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b')
+                  }}>
+                    {banco}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           {/* Seguro de Desgravamen */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
