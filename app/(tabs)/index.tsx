@@ -246,12 +246,6 @@ export default function LoanCalculatorScreen() {
               Ingresa los datos para calcular tu cuota
             </Text>
           </View>
-          <Pressable
-            onPress={resetStore}
-            className="rounded-full p-2.5 bg-slate-200 dark:bg-slate-800"
-          >
-            <Ionicons name="refresh" size={20} color={isDark ? '#94a3b8' : '#334155'} />
-          </Pressable>
         </View>
 
         {/* ── FORMULARIO ─────────────────────────────────────────────────── */}
@@ -412,53 +406,67 @@ export default function LoanCalculatorScreen() {
 
         {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
         {isCalculated && amortizationTable.length > 0 && (
-          <View className="bg-teal-950 rounded-3xl p-7 mb-8 shadow-xl shadow-teal-900/40">
-            <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
-              CUOTA MENSUAL FIJA
-            </Text>
-            <Text className="text-[52px] font-black text-white text-center leading-tight mb-1" numberOfLines={1}>
-              {formatCurrency(cuotaMensualEstimada, moneda)}
-            </Text>
-            <Text className="text-teal-400 text-center text-sm font-medium mb-6">
-              por {plazoMeses} meses · incluye seguro desgravamen
-            </Text>
+          <View>
+            <View className="bg-teal-950 rounded-3xl p-7 mb-4 shadow-xl shadow-teal-900/40">
+              <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
+                CUOTA MENSUAL FIJA
+              </Text>
+              <Text className="text-[52px] font-black text-white text-center leading-tight mb-1" numberOfLines={1}>
+                {formatCurrency(cuotaMensualEstimada, moneda)}
+              </Text>
+              <Text className="text-teal-400 text-center text-sm font-medium mb-6">
+                por {plazoMeses} meses · incluye seguro desgravamen
+              </Text>
 
-            <View className="flex-row justify-between mb-8">
-              <View className="flex-1 items-center">
-                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
-                <Text className="text-white font-extrabold text-lg" numberOfLines={1}>
-                  {formatCurrency(totalPagar, moneda)}
-                </Text>
+              <View className="flex-row justify-between mb-8">
+                <View className="flex-1 items-center">
+                  <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
+                  <Text className="text-white font-extrabold text-lg" numberOfLines={1}>
+                    {formatCurrency(totalPagar, moneda)}
+                  </Text>
+                </View>
+                <View className="w-px bg-teal-800" />
+                <View className="flex-1 items-center">
+                  <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">INTS. Y SEGURO</Text>
+                  <Text className="text-teal-300 font-extrabold text-lg" numberOfLines={1}>
+                    {formatCurrency(totalInteres + totalSeguro, moneda)}
+                  </Text>
+                </View>
               </View>
-              <View className="w-px bg-teal-800" />
-              <View className="flex-1 items-center">
-                <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">INTS. Y SEGURO</Text>
-                <Text className="text-teal-300 font-extrabold text-lg" numberOfLines={1}>
-                  {formatCurrency(totalInteres + totalSeguro, moneda)}
-                </Text>
-              </View>
-            </View>
 
-            <Link href="/explore" asChild onPress={() => {}}>
+              <Link href="/explore" asChild onPress={() => {}}>
+                <Pressable
+                  className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
+                  style={{ backgroundColor: '#115e59' }}
+                >
+                  <Ionicons name="list-outline" size={20} color="#ccfbf1" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#ccfbf1', fontWeight: '700', fontSize: 15 }}>
+                    Ver Tabla de Amortización
+                  </Text>
+                </Pressable>
+              </Link>
+
               <Pressable
-                className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
-                style={{ backgroundColor: '#115e59' }}
+                className="rounded-2xl py-4 items-center justify-center flex-row"
+                style={{ backgroundColor: '#1e293b' }}
+                onPress={generatePDF}
               >
-                <Ionicons name="list-outline" size={20} color="#ccfbf1" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#ccfbf1', fontWeight: '700', fontSize: 15 }}>
-                  Ver Tabla de Amortización
+                <Ionicons name="document-text-outline" size={20} color="#94a3b8" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#94a3b8', fontWeight: '700', fontSize: 15 }}>
+                  Exportar a PDF
                 </Text>
               </Pressable>
-            </Link>
+            </View>
 
+            {/* Botón Reinicio Rectangular */}
             <Pressable
-              className="rounded-2xl py-4 items-center justify-center flex-row"
-              style={{ backgroundColor: '#1e293b' }}
-              onPress={generatePDF}
+              onPress={resetStore}
+              className="rounded-2xl py-4 flex-row items-center justify-center border border-slate-300 dark:border-slate-800 mb-10"
+              style={{ backgroundColor: isDark ? 'transparent' : '#f8fafc' }}
             >
-              <Ionicons name="document-text-outline" size={20} color="#94a3b8" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#94a3b8', fontWeight: '700', fontSize: 15 }}>
-                Exportar a PDF
+              <Ionicons name="refresh-outline" size={20} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 8 }} />
+              <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700', fontSize: 15 }}>
+                Nueva Simulación / Limpiar
               </Text>
             </Pressable>
           </View>
