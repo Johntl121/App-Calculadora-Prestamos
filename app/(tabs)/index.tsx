@@ -731,7 +731,7 @@ export default function LoanCalculatorScreen() {
                       }}>
                         <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TEA:</Text>
                         <LaTeXView
-                          formula="TEM = (1 + TEA)^{\\frac{1}{12}} - 1"
+                          formula={String.raw`TEM = (1 + TEA)^{\frac{1}{12}} - 1`}
                           color={isDark ? '#0f766e' : undefined}
                           backgroundColor={isDark ? '#1e293b' : '#ffffff'}
                           fontSize={14}
@@ -743,7 +743,7 @@ export default function LoanCalculatorScreen() {
                       }}>
                         <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TNA:</Text>
                         <LaTeXView
-                          formula="TEM = \\frac{TNA}{12}"
+                          formula={String.raw`TEM = \frac{TNA}{12}`}
                           color={isDark ? '#f59e0b' : '#b45309'}
                           backgroundColor={isDark ? '#1e293b' : '#ffffff'}
                           fontSize={14}
@@ -769,7 +769,7 @@ export default function LoanCalculatorScreen() {
                       borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 10,
                     }}>
                       <LaTeXView
-                        formula="Cuota = P \\times \\frac{i(1+i)^n}{(1+i)^n - 1}"
+                        formula={String.raw`Cuota = P \times \frac{i(1+i)^n}{(1+i)^n - 1}`}
                         color={isDark ? '#93c5fd' : '#2563eb'}
                         backgroundColor={isDark ? '#1e293b' : '#ffffff'}
                         fontSize={15}
