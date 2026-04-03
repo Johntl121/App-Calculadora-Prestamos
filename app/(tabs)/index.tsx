@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
   View,
+  LayoutAnimation,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
@@ -309,12 +310,14 @@ export default function LoanCalculatorScreen() {
                 <Pressable
                   key={opcion}
                   onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                     updateParameter('tipoTasaFija', opcion);
                     setIsCalculated(false);
                   }}
                   style={{
                     flex: 1,
                     paddingVertical: 10,
+                    justifyContent: 'center',
                     borderRadius: 10,
                     alignItems: 'center',
                     backgroundColor: isActive ? (isDark ? '#0f766e' : '#0f172a') : 'transparent',
