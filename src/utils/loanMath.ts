@@ -29,6 +29,7 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     monto,
     tasaInteres,
     tipoTasaFija,
+    tipoCalendario,
     plazoMeses,
     seguroDesgravamenRateMensual,
     fechaDesembolso,
@@ -75,11 +76,18 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
   // ── 3. Tasa Seguro Desgravamen Mensual ────────────────────────────────────
   const TSD = numDesgravamen / 100;
 
-  // ── 4. Cuota fija teórica — Ajustada por días reales (365 anual) ─────────
-  const diasPromedioMes = 365 / 12;
-  const TEM_Ajustada = Math.pow(1 + TED, diasPromedioMes) - 1;
-  const Seguro_Ajustado = TSD * (diasPromedioMes / 30);
-  const J = TEM_Ajustada + Seguro_Ajustado;
+  // ── 4. Cuota fija teórica ──────────────────────────────────────────────────
+  // Calendario Comercial (30/360): usa TEM exacta y seguro a 30 días fijos.
+  // Calendario Real (365 anual): ajusta por promedio 365/12 para absorber el día extra.
+  let J: number;
+  if (tipoCalendario === 'comercial') {
+    J = TEM + TSD;
+  } else {
+    const diasPromedioMes = 365 / 12;
+    const TEM_Ajustada = Math.pow(1 + TED, diasPromedioMes) - 1;
+    const Seguro_Ajustado = TSD * (diasPromedioMes / 30);
+    J = TEM_Ajustada + Seguro_Ajustado;
+  }
 
   let cuotaTotalFija: number;
   if (J === 0) {
@@ -107,7 +115,10 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
   for (let i = 1; i <= numPlazo; i++) {
     const fechaAnterior = fechaVencimiento(fechaDesembolso, i - 1);
     const fechaActual   = fechaVencimiento(fechaDesembolso, i);
-    const dias          = differenceInDays(fechaActual, fechaAnterior);
+    // Días del período según el tipo de calendario elegido
+    const dias = tipoCalendario === 'comercial'
+      ? 30
+      : differenceInDays(fechaActual, fechaAnterior);
 
     const interesMes = saldo * (Math.pow(1 + TED, dias) - 1);
     const seguroMes  = saldo * TSD * (dias / 30);

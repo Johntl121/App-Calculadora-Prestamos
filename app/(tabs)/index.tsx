@@ -35,6 +35,7 @@ export default function LoanCalculatorScreen() {
     monto,
     tasaInteres,
     tipoTasaFija,
+    tipoCalendario,
     plazoMeses,
     seguroDesgravamenRateMensual,
     moneda,
@@ -155,7 +156,7 @@ export default function LoanCalculatorScreen() {
           <body>
             <div class="header">
               <h1>Plan de Amortización</h1>
-              <p>Tasa (${tipoTasaFija}): ${tasaInteres || 0}% &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses || 0} meses</p>
+              <p>Tasa (${tipoTasaFija}): ${tasaInteres || 0}% &nbsp;&middot;&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;&middot;&nbsp; Plazo: ${plazoMeses || 0} meses &nbsp;&middot;&nbsp; Base: ${tipoCalendario === 'comercial' ? 'Mes Comercial 30/360' : 'Calendario Real'}</p>
             </div>
 
             <div class="summary">
@@ -412,6 +413,55 @@ export default function LoanCalculatorScreen() {
               placeholder="24" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 ml-2">meses</Text>
+          </View>
+        </View>
+
+        {/* ── BASE DE CÁLCULO ─────────────────────────────────────────────── */}
+        <View style={{ marginBottom: 16 }}>
+          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">
+            BASE DE CÁLCULO
+          </Text>
+          <View style={{
+            flexDirection: 'row', gap: 8,
+          }}>
+            {(['real', 'comercial'] as const).map((tipo) => {
+              const isActive = tipoCalendario === tipo;
+              return (
+                <Pressable
+                  key={tipo}
+                  onPress={() => {
+                    updateParameter('tipoCalendario', tipo);
+                    setIsCalculated(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 12,
+                    paddingHorizontal: 8,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    borderWidth: 1.5,
+                    backgroundColor: isActive
+                      ? (isDark ? '#134e4a' : '#0f766e')
+                      : (isDark ? '#1e293b' : '#f1f5f9'),
+                    borderColor: isActive ? '#0f766e' : (isDark ? '#334155' : '#e2e8f0'),
+                  }}
+                >
+                  <Text style={{
+                    fontWeight: '800', fontSize: 12,
+                    color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
+                    marginBottom: 2,
+                  }}>
+                    {tipo === 'real' ? 'Días Reales' : 'Mes Comercial'}
+                  </Text>
+                  <Text style={{
+                    fontSize: 10,
+                    color: isActive ? '#99f6e4' : (isDark ? '#475569' : '#94a3b8'),
+                  }}>
+                    {tipo === 'real' ? 'Bancario (exact.)' : '30 días fijos'}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </View>
 

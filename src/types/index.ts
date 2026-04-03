@@ -5,6 +5,7 @@ export interface LoanParameters {
   monto: string;
   tasaInteres: string;
   tipoTasaFija: 'TEA' | 'TEM' | 'TNA';
+  tipoCalendario: 'real' | 'comercial';
   plazoMeses: string;
   seguroDesgravamenRateMensual: string;
   fechaDesembolso: Date;
