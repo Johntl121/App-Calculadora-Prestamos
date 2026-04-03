@@ -521,22 +521,25 @@ export default function LoanCalculatorScreen() {
         visible={infoVisible}
         onRequestClose={() => setInfoVisible(false)}
       >
-        {/* Fondo semi-transparente */}
-        <Pressable
-          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
-          onPress={() => setInfoVisible(false)}
-        >
-          {/* Tarjeta — bloqueamos el press para que no cierre al tocar dentro */}
+        {/* Fondo semi-transparente y contenedor principal */}
+        <View style={{ flex: 1 }}>
+          {/* Backdrop absoluto que captura los toques fuera del modal */}
           <Pressable
-            onPress={(e) => e.stopPropagation()}
-            style={{
-              maxHeight: '88%',
-              backgroundColor: isDark ? '#0f172a' : '#ffffff',
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              paddingBottom: insets.bottom + 16,
-            }}
-          >
+            style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.55)' }}
+            onPress={() => setInfoVisible(false)}
+          />
+          
+          <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
+            {/* Tarjeta Modal — Un View simple para no interceptar los gestos del ScrollView */}
+            <View
+              style={{
+                maxHeight: '88%',
+                backgroundColor: isDark ? '#0f172a' : '#ffffff',
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                paddingBottom: insets.bottom + 16,
+              }}
+            >
             {/* Cabecera del modal */}
             <View style={{
               flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -785,8 +788,9 @@ export default function LoanCalculatorScreen() {
                 </View>
               )}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+            </View>
+          </View>
+        </View>
       </Modal>
     </View>
   );
