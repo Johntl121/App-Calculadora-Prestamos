@@ -1,8 +1,8 @@
-import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Paths, moveAsync } from 'expo-file-system';
 import { Ionicons } from '@expo/vector-icons';
+import { Paths, moveAsync } from 'expo-file-system';
+import * as Print from 'expo-print';
 import { Link } from 'expo-router';
+import * as Sharing from 'expo-sharing';
 import { useColorScheme } from 'nativewind';
 import React, { useMemo, useState } from 'react';
 import {
@@ -46,7 +46,7 @@ export default function LoanCalculatorScreen() {
   } = useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
-  const [infoVisible, setInfoVisible]   = useState(false);
+  const [infoVisible, setInfoVisible] = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
@@ -94,10 +94,10 @@ export default function LoanCalculatorScreen() {
       let totalAmort = 0, totalInteres = 0, totalSeguro = 0, totalCuotas = 0;
       amortizationTable.forEach((r) => {
         if (r.mes === 0) return;
-        totalAmort   += r.capitalAmortizado;
+        totalAmort += r.capitalAmortizado;
         totalInteres += r.interesPagado;
-        totalSeguro  += r.seguroDesgravamen;
-        totalCuotas  += r.cuotaTotal;
+        totalSeguro += r.seguroDesgravamen;
+        totalCuotas += r.cuotaTotal;
       });
 
       const tableRows = amortizationTable.map((row) => `
@@ -113,7 +113,7 @@ export default function LoanCalculatorScreen() {
       `).join('');
 
       const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
-      const cuotaMes1  = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
+      const cuotaMes1 = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
       const numMonto = parseFloat(monto) || 0;
 
       const htmlContent = `
@@ -213,9 +213,9 @@ export default function LoanCalculatorScreen() {
     let tPagar = 0, tInteres = 0, tSeguro = 0;
     for (const row of amortizationTable) {
       if (row.mes === 0) continue;
-      tPagar   += row.cuotaTotal;
+      tPagar += row.cuotaTotal;
       tInteres += row.interesPagado;
-      tSeguro  += row.seguroDesgravamen;
+      tSeguro += row.seguroDesgravamen;
     }
     return { cuotaMensualEstimada: primeraCuota, totalPagar: tPagar, totalInteres: tInteres, totalSeguro: tSeguro };
   }, [amortizationTable]);
@@ -228,7 +228,7 @@ export default function LoanCalculatorScreen() {
 
       <ScrollView
         className="flex-1 px-5 pt-6 pb-24"
-        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── ENCABEZADO ─────────────────────────────────────────────────── */}
@@ -316,7 +316,7 @@ export default function LoanCalculatorScreen() {
                     paddingVertical: 10,
                     borderRadius: 10,
                     alignItems: 'center',
-                    backgroundColor: isActive ? '#0f766e' : 'transparent',
+                    backgroundColor: isActive ? (isDark ? '#0f766e' : '#0f172a') : 'transparent',
                   }}
                 >
                   <Text style={{
@@ -328,10 +328,10 @@ export default function LoanCalculatorScreen() {
                     {opcion}
                   </Text>
                   {isActive && (
-                    <Text style={{ fontSize: 9, color: '#99f6e4', marginTop: 1 }}>
+                    <Text style={{ fontSize: 9, color: isDark ? '#99f6e4' : '#94a3b8', marginTop: 1, opacity: 0.8 }}>
                       {opcion === 'TEA' ? 'Efectiva Anual'
                         : opcion === 'TEM' ? 'Efectiva Mensual'
-                        : 'Nominal Anual'}
+                          : 'Nominal Anual'}
                     </Text>
                   )}
                 </Pressable>
@@ -445,7 +445,7 @@ export default function LoanCalculatorScreen() {
                 </View>
               </View>
 
-              <Link href="/explore" asChild onPress={() => {}}>
+              <Link href="/explore" asChild onPress={() => { }}>
                 <Pressable
                   className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
                   style={{ backgroundColor: '#115e59' }}
