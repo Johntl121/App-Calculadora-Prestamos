@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
+import LaTeXView from '../../src/components/LaTeXView';
 
 const formatCurrency = (value: number, symbol: string) => {
   return `${symbol} ${(value || 0).toLocaleString('en-US', {
@@ -729,18 +730,24 @@ export default function LoanCalculatorScreen() {
                         borderRadius: 10, padding: 12,
                       }}>
                         <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TEA:</Text>
-                        <Text style={{ fontFamily: 'monospace', fontSize: 13, color: '#0f766e', fontWeight: '700' }}>
-                          TEM = (1 + TEA)^(1/12) − 1
-                        </Text>
+                        <LaTeXView
+                          formula="TEM = (1 + TEA)^{\\frac{1}{12}} - 1"
+                          color={isDark ? '#0f766e' : undefined}
+                          backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                          fontSize={14}
+                        />
                       </View>
                       <View style={{
                         backgroundColor: isDark ? '#1e293b' : '#ffffff',
                         borderRadius: 10, padding: 12,
                       }}>
                         <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TNA:</Text>
-                        <Text style={{ fontFamily: 'monospace', fontSize: 13, color: '#f59e0b', fontWeight: '700' }}>
-                          TEM = TNA / 12
-                        </Text>
+                        <LaTeXView
+                          formula="TEM = \\frac{TNA}{12}"
+                          color={isDark ? '#f59e0b' : '#b45309'}
+                          backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                          fontSize={14}
+                        />
                       </View>
                     </View>
                   </View>
@@ -759,14 +766,14 @@ export default function LoanCalculatorScreen() {
                     </View>
                     <View style={{
                       backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderRadius: 10, padding: 14, marginBottom: 10,
+                      borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 10,
                     }}>
-                      <Text style={{ fontFamily: 'monospace', fontSize: 14, color: '#3b82f6', fontWeight: '700', textAlign: 'center', lineHeight: 22 }}>
-                        {'Cuota = P \u00d7 [ i(1+i)^n ]'}
-                      </Text>
-                      <Text style={{ fontFamily: 'monospace', fontSize: 14, color: '#3b82f6', fontWeight: '700', textAlign: 'center', lineHeight: 22 }}>
-                        {'     / [ (1+i)^n \u2212 1 ]'}
-                      </Text>
+                      <LaTeXView
+                        formula="Cuota = P \\times \\frac{i(1+i)^n}{(1+i)^n - 1}"
+                        color={isDark ? '#93c5fd' : '#2563eb'}
+                        backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                        fontSize={15}
+                      />
                     </View>
                     <View style={{ gap: 5 }}>
                       {[
