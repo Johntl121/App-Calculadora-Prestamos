@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Paths, moveAsync } from 'expo-file-system';
+import { Paths, File } from 'expo-file-system';
 import * as Print from 'expo-print';
 import { Link } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -197,9 +197,11 @@ export default function LoanCalculatorScreen() {
       `;
 
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
-      const pdfName = `${Paths.cache.uri}Reporte_Simulacion_${numMonto}_${safeMoneda}.pdf`;
-      await moveAsync({ from: uri, to: pdfName });
-      await Sharing.shareAsync(pdfName, { UTI: '.pdf', mimeType: 'application/pdf' });
+      const tempFile = new File(uri);
+      const pdfFile = new File(Paths.cache, `Reporte_Simulacion_${numMonto}_${safeMoneda}.pdf`);
+      tempFile.move(pdfFile);
+      
+      await Sharing.shareAsync(pdfFile.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
