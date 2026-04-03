@@ -6,6 +6,7 @@ import { Link } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import React, { useMemo, useState } from 'react';
 import {
+  Modal,
   Pressable,
   ScrollView,
   Switch,
@@ -47,6 +48,7 @@ export default function LoanCalculatorScreen() {
   } = useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
+  const [infoVisible, setInfoVisible]   = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
@@ -481,6 +483,141 @@ export default function LoanCalculatorScreen() {
       >
         <Ionicons name={isDark ? 'sunny' : 'moon'} size={20} color={isDark ? '#fef08a' : '#334155'} />
       </Pressable>
+
+      {/* Botón Info */}
+      <Pressable
+        onPress={() => setInfoVisible(true)}
+        className="absolute rounded-full p-2.5 bg-slate-200/60 dark:bg-slate-800"
+        style={{ top: insets.top + 12, right: 64, zIndex: 999, elevation: 5 }}
+      >
+        <Ionicons name="information-circle-outline" size={20} color={isDark ? '#5eead4' : '#0f766e'} />
+      </Pressable>
+
+      {/* ── MODAL GUIA DEL SIMULADOR ───────────────────────────────────────── */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={infoVisible}
+        onRequestClose={() => setInfoVisible(false)}
+      >
+        {/* Fondo semi-transparente */}
+        <Pressable
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}
+          onPress={() => setInfoVisible(false)}
+        >
+          {/* Tarjeta — bloqueamos el press para que no cierre al tocar dentro */}
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              maxHeight: '88%',
+              backgroundColor: isDark ? '#0f172a' : '#ffffff',
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingBottom: insets.bottom + 16,
+            }}
+          >
+            {/* Cabecera del modal */}
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16,
+              borderBottomWidth: 1, borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Ionicons name="book-outline" size={22} color="#0f766e" />
+                <Text style={{ fontSize: 18, fontWeight: '900', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                  Guía del Simulador
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setInfoVisible(false)}
+                style={{
+                  width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                }}
+              >
+                <Ionicons name="close" size={18} color={isDark ? '#94a3b8' : '#64748b'} />
+              </Pressable>
+            </View>
+
+            {/* Contenido con scroll */}
+            <ScrollView
+              style={{ paddingHorizontal: 24 }}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingTop: 20, paddingBottom: 8 }}
+            >
+              {/* ── Sistema Francés ─────────────────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                borderRadius: 16, padding: 18, marginBottom: 14,
+                borderLeftWidth: 3, borderLeftColor: '#0f766e',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <Ionicons name="stats-chart-outline" size={18} color="#0f766e" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    Sistema Francés (Cuotas Fijas)
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                  Esta app utiliza el método de cuotas fijas. Al inicio pagas más intereses y menos capital, pero tu cuota mensual se mantiene igual durante todo el plazo.
+                </Text>
+              </View>
+
+              {/* ── TEA vs TCEA ─────────────────────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                borderRadius: 16, padding: 18, marginBottom: 14,
+                borderLeftWidth: 3, borderLeftColor: '#6366f1',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <Ionicons name="trending-up-outline" size={18} color="#6366f1" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    TEA vs. TCEA
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TEA</Text> es el costo puro de tu préstamo.{' '}
+                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TCEA</Text> es la TEA + el Seguro de Desgravamen.{' '}
+                  Ingresa tu TEA para que la simulación sea exacta.
+                </Text>
+              </View>
+
+              {/* ── Seguro de Desgravamen ────────────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                borderRadius: 16, padding: 18, marginBottom: 14,
+                borderLeftWidth: 3, borderLeftColor: '#f59e0b',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#f59e0b" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    Seguro de Desgravamen
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                  Es obligatorio en muchos préstamos. Lo calculamos de forma proporcional a los días reales del período sobre tu saldo pendiente, tal como lo hacen BCP, BBVA e Interbank.
+                </Text>
+              </View>
+
+              {/* ── Aviso Legal ──────────────────────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#0f172a' : '#fafafa',
+                borderRadius: 16, padding: 16, marginBottom: 8,
+                borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 }}>
+                  <Ionicons name="alert-circle-outline" size={16} color={isDark ? '#64748b' : '#94a3b8'} />
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#64748b' : '#94a3b8' }}>
+                    Aviso Legal
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8', lineHeight: 18 }}>
+                  Los resultados son simulaciones referenciales. Los montos finales pueden variar ligeramente por redondeos o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
+                </Text>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
