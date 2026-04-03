@@ -47,6 +47,7 @@ export default function LoanCalculatorScreen() {
 
   const [isCalculated, setIsCalculated] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
+  const [showFormulas, setShowFormulas] = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
@@ -623,6 +624,155 @@ export default function LoanCalculatorScreen() {
                   Los resultados son simulaciones referenciales. Los montos finales pueden variar ligeramente por redondeos o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
                 </Text>
               </View>
+
+              {/* ── Botón toggle Fórmulas ───────────────────────────── */}
+              <Pressable
+                onPress={() => setShowFormulas(!showFormulas)}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                  paddingVertical: 14, marginTop: 8, marginBottom: 4, gap: 8,
+                  borderRadius: 14,
+                  backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                  borderWidth: 1,
+                  borderColor: isDark ? '#334155' : '#e2e8f0',
+                }}
+              >
+                <Ionicons
+                  name={showFormulas ? 'chevron-up-outline' : 'calculator-outline'}
+                  size={16}
+                  color="#0f766e"
+                />
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f766e' }}>
+                  {showFormulas ? 'Ocultar Fórmulas' : 'Ver Fórmulas y Casos de Uso Reales'}
+                </Text>
+              </Pressable>
+
+              {/* ── Contenido expandible ──────────────────────────── */}
+              {showFormulas && (
+                <View style={{ marginTop: 12, gap: 12 }}>
+
+                  {/* Casos de Uso */}
+                  <View style={{
+                    backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                    borderRadius: 14, padding: 16,
+                    borderLeftWidth: 3, borderLeftColor: '#6366f1',
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <Ionicons name="briefcase-outline" size={16} color="#6366f1" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#c7d2fe' : '#4338ca' }}>
+                        Cuándo usar cada tasa
+                      </Text>
+                    </View>
+                    <View style={{ gap: 8 }}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <Text style={{
+                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                          color: '#0f766e', backgroundColor: isDark ? '#0f172a' : '#f0fdf4',
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                        }}>TEA</Text>
+                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                          Estándar bancario. Hipotecas, créditos vehiculares y personales. Considera la capitalización del dinero.
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <Text style={{
+                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                          color: '#f59e0b', backgroundColor: isDark ? '#0f172a' : '#fffbeb',
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                        }}>TEM</Text>
+                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                          Tasa ya mensualizada. Útil cuando el banco te informa directamente la tasa del mes.
+                        </Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <Text style={{
+                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                          color: '#ec4899', backgroundColor: isDark ? '#0f172a' : '#fdf2f8',
+                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                        }}>TNA</Text>
+                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                          Préstamos informales, comerciales de corto plazo o prestamistas privados. No asume capitalización.
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Conversión a TEM */}
+                  <View style={{
+                    backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                    borderRadius: 14, padding: 16,
+                    borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <Ionicons name="swap-horizontal-outline" size={16} color="#0f766e" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                        Conversión a Tasa Mensual
+                      </Text>
+                    </View>
+                    <View style={{ gap: 8 }}>
+                      <View style={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderRadius: 10, padding: 12,
+                      }}>
+                        <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TEA:</Text>
+                        <Text style={{ fontFamily: 'monospace', fontSize: 13, color: '#0f766e', fontWeight: '700' }}>
+                          TEM = (1 + TEA)^(1/12) − 1
+                        </Text>
+                      </View>
+                      <View style={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderRadius: 10, padding: 12,
+                      }}>
+                        <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TNA:</Text>
+                        <Text style={{ fontFamily: 'monospace', fontSize: 13, color: '#f59e0b', fontWeight: '700' }}>
+                          TEM = TNA / 12
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Fórmula de Cuota Fija */}
+                  <View style={{
+                    backgroundColor: isDark ? '#0c1a2e' : '#eff6ff',
+                    borderRadius: 14, padding: 16,
+                    borderLeftWidth: 3, borderLeftColor: '#3b82f6',
+                  }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <Ionicons name="calculator-outline" size={16} color="#3b82f6" />
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#bfdbfe' : '#1d4ed8' }}>
+                        Sistema Francés — Fórmula de Cuota
+                      </Text>
+                    </View>
+                    <View style={{
+                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                      borderRadius: 10, padding: 14, marginBottom: 10,
+                    }}>
+                      <Text style={{ fontFamily: 'monospace', fontSize: 14, color: '#3b82f6', fontWeight: '700', textAlign: 'center', lineHeight: 22 }}>
+                        {'Cuota = P \u00d7 [ i(1+i)^n ]'}
+                      </Text>
+                      <Text style={{ fontFamily: 'monospace', fontSize: 14, color: '#3b82f6', fontWeight: '700', textAlign: 'center', lineHeight: 22 }}>
+                        {'     / [ (1+i)^n \u2212 1 ]'}
+                      </Text>
+                    </View>
+                    <View style={{ gap: 5 }}>
+                      {[
+                        ['P', 'Monto del préstamo'],
+                        ['i', 'TEM + Tasa de Desgravamen'],
+                        ['n', 'Plazo en meses'],
+                      ].map(([sym, desc]) => (
+                        <View key={sym} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <Text style={{
+                            fontFamily: 'monospace', fontWeight: '800', fontSize: 13,
+                            color: '#3b82f6', width: 18, textAlign: 'center',
+                          }}>{sym}</Text>
+                          <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569' }}>=  {desc}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
+                </View>
+              )}
             </ScrollView>
           </Pressable>
         </Pressable>
