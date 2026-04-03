@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import React from 'react';
+import { View, Platform } from 'react-native';
+import Katex from 'react-native-katex';
 
 interface LaTeXViewProps {
   formula: string;
@@ -18,66 +18,40 @@ const LaTeXView: React.FC<LaTeXViewProps> = ({
   backgroundColor = 'transparent',
   fontSize = 16,
 }) => {
-  const [height, setHeight] = useState(50);
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
-    onload="renderMathInElement(document.body, { delimiters: [{ left: '$$', right: '$$', display: true }] });"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      background: ${backgroundColor === 'transparent' ? 'transparent' : backgroundColor};
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      overflow: hidden;
-    }
-    .katex-display {
-      margin: 0 !important;
-      color: ${color};
-      font-size: ${fontSize}px;
-    }
-    .katex { color: ${color} !important; font-size: ${fontSize}px; }
-    .katex * { color: inherit !important; }
-  </style>
-</head>
-<body>
-  <div id="formula"></div>
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      katex.render(String.raw\`${formula}\`, document.getElementById('formula'), {
-        displayMode: true,
-        throwOnError: false
-      });
-      // Enviar la altura real al componente nativo
-      const h = document.body.scrollHeight;
-      window.ReactNativeWebView.postMessage(String(h));
-    });
-  </script>
-</body>
-</html>
+  const inlineStyle = `
+html, body {
+  background: ${backgroundColor === 'transparent' ? 'transparent' : backgroundColor};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.katex {
+  color: ${color} !important;
+  font-size: ${fontSize}px;
+}
+.katex * { color: inherit !important; }
   `;
 
+  // Determinamos un alto aproximado basado en la complejidad de la fórmula 
+  // para evitar inyecciones de JS personalizadas que alteren el core de KaTeX offline.
+  const isFraction = formula.includes('\\frac');
+  const rootHeight = isFraction ? (Platform.OS === 'ios' ? 55 : 65) : 40;
+
   return (
-    <View style={{ height, width: '100%' }}>
-      <WebView
-        source={{ html }}
+    <View style={{ height: rootHeight, width: '100%', overflow: 'hidden' }}>
+      <Katex
+        expression={formula}
+        displayMode={true}
+        inlineStyle={inlineStyle}
         style={{ flex: 1, backgroundColor: 'transparent' }}
-        scrollEnabled={false}
-        onMessage={(e) => {
-          const h = parseInt(e.nativeEvent.data, 10);
-          if (!isNaN(h) && h > 0) setHeight(h + 8);
-        }}
-        originWhitelist={['*']}
-        // Necesario para fondo transparente en Android
         androidLayerType="software"
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+        showsHorizontalScrollIndicator={false}
       />
     </View>
   );
