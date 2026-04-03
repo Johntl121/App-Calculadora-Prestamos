@@ -31,15 +31,16 @@ html, body {
 }
 .katex {
   color: ${color} !important;
-  font-size: ${fontSize}px;
+  font-size: ${fontSize + 2}px !important;
 }
 .katex * { color: inherit !important; }
+</style><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" /><style>
   `;
 
   // Determinamos un alto aproximado basado en la complejidad de la fórmula 
   // para evitar inyecciones de JS personalizadas que alteren el core de KaTeX offline.
   const isFraction = formula.includes('\\frac');
-  const rootHeight = isFraction ? (Platform.OS === 'ios' ? 55 : 65) : 40;
+  const rootHeight = isFraction ? (Platform.OS === 'ios' ? 70 : 80) : 55;
 
   return (
     <View style={{ height: rootHeight, width: '100%', overflow: 'hidden' }}>
