@@ -75,8 +75,12 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
   // ── 3. Tasa Seguro Desgravamen Mensual ────────────────────────────────────
   const TSD = numDesgravamen / 100;
 
-  // ── 4. Cuota fija teórica — Tasa Combinada J = TEM + TSD ─────────────────
-  const J = TEM + TSD;
+  // ── 4. Cuota fija teórica — Ajustada por días reales (365 anual) ─────────
+  const diasPromedioMes = 365 / 12;
+  const TEM_Ajustada = Math.pow(1 + TED, diasPromedioMes) - 1;
+  const Seguro_Ajustado = TSD * (diasPromedioMes / 30);
+  const J = TEM_Ajustada + Seguro_Ajustado;
+
   let cuotaTotalFija: number;
   if (J === 0) {
     cuotaTotalFija = numMonto / numPlazo;
