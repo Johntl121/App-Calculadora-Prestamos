@@ -3,10 +3,9 @@
  */
 export interface LoanParameters {
   monto: string;
-  tasaInteres: string;   // TEA o TNA en porcentaje
-  esAnual: boolean;
+  tasaInteres: string;
+  tipoTasaFija: 'TEA' | 'TEM' | 'TNA';
   plazoMeses: string;
-  tipoTasa: 'efectiva' | 'nominal';
   seguroDesgravamenRateMensual: string;
   fechaDesembolso: Date;
 }
@@ -16,10 +15,10 @@ export interface LoanParameters {
  */
 export interface AmortizationRow {
   mes: number;
-  fecha: string;           // Formato DD/MM/YYYY
-  cuotaTotal: number;      // Cuota fija TOTAL (interés + amortización + seguro)
-  interesPagado: number;   // Porción de intereses
-  seguroDesgravamen: number; // Costo mensual del seguro
-  capitalAmortizado: number; // Porción que reduce la deuda
-  saldoRemanente: number;  // Saldo pendiente tras la cuota
+  fecha: string;            // Formato DD/MM/YYYY
+  cuotaTotal: number;       // Cuota TOTAL (interés + amortización + seguro)
+  interesPagado: number;    // Porción de intereses
+  seguroDesgravamen: number;// Costo mensual del seguro
+  capitalAmortizado: number;// Porción que reduce la deuda
+  saldoRemanente: number;   // Saldo pendiente tras la cuota
 }

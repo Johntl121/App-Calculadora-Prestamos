@@ -9,7 +9,6 @@ import {
   Modal,
   Pressable,
   ScrollView,
-  Switch,
   Text,
   TextInput,
   View,
@@ -33,9 +32,8 @@ export default function LoanCalculatorScreen() {
   const {
     monto,
     tasaInteres,
-    esAnual,
+    tipoTasaFija,
     plazoMeses,
-    tipoTasa,
     seguroDesgravamenRateMensual,
     moneda,
     amortizationTable,
@@ -78,11 +76,6 @@ export default function LoanCalculatorScreen() {
   const handlePlazo = (val: string) => {
     const clean = val.replace(/[^0-9]/g, '');
     updateParameter('plazoMeses', clean);
-    setIsCalculated(false);
-  };
-
-  const handleSwitchTasa = (val: boolean) => {
-    updateParameter('esAnual', val);
     setIsCalculated(false);
   };
 
@@ -159,7 +152,7 @@ export default function LoanCalculatorScreen() {
           <body>
             <div class="header">
               <h1>Plan de Amortización</h1>
-              <p>Tasa (${tipoTasa}): ${tasaInteres || 0}% ${esAnual ? 'Anual' : 'Mensual'} &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses || 0} meses</p>
+              <p>Tasa (${tipoTasaFija}): ${tasaInteres || 0}% &nbsp;·&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;·&nbsp; Plazo: ${plazoMeses || 0} meses</p>
             </div>
 
             <div class="summary">
@@ -297,37 +290,53 @@ export default function LoanCalculatorScreen() {
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
 
-          {/* Tipo Tasa: Efectiva / Nominal */}
-          <View className="flex-row mb-4" style={{ gap: 8 }}>
-            {(['efectiva', 'nominal'] as const).map((tipo) => (
-              <Pressable
-                key={tipo}
-                onPress={() => updateParameter('tipoTasa', tipo)}
-                style={{
-                  flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center',
-                  backgroundColor: tipoTasa === tipo
-                    ? (isDark ? '#0f766e' : '#0f172a')
-                    : (isDark ? '#1e293b' : '#f1f5f9'),
-                }}
-              >
-                <Text style={{
-                  fontWeight: 'bold', fontSize: 13,
-                  color: tipoTasa === tipo ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b'),
-                }}>
-                  T. {tipo.charAt(0).toUpperCase() + tipo.slice(1)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {/* Toggle Mensual / Anual */}
-          <View className="flex-row items-center justify-center mb-5" style={{ gap: 12 }}>
-            <Text className="text-sm font-bold text-slate-500 dark:text-slate-400">Mensual</Text>
-            <Switch value={esAnual} onValueChange={handleSwitchTasa}
-              trackColor={{ false: '#94a3b8', true: '#0f766e' }}
-              thumbColor={esAnual ? '#ccfbf1' : '#f8fafc'}
-            />
-            <Text className="text-sm font-bold text-slate-950 dark:text-white">Anual</Text>
+          {/* Segmented Control: TEA / TEM / TNA */}
+          <View
+            style={{
+              flexDirection: 'row',
+              marginBottom: 20,
+              borderRadius: 14,
+              overflow: 'hidden',
+              backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+              padding: 4,
+              gap: 4,
+            }}
+          >
+            {(['TEA', 'TEM', 'TNA'] as const).map((opcion) => {
+              const isActive = tipoTasaFija === opcion;
+              return (
+                <Pressable
+                  key={opcion}
+                  onPress={() => {
+                    updateParameter('tipoTasaFija', opcion);
+                    setIsCalculated(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 10,
+                    borderRadius: 10,
+                    alignItems: 'center',
+                    backgroundColor: isActive ? '#0f766e' : 'transparent',
+                  }}
+                >
+                  <Text style={{
+                    fontWeight: '800',
+                    fontSize: 14,
+                    letterSpacing: 0.5,
+                    color: isActive ? '#ffffff' : (isDark ? '#64748b' : '#94a3b8'),
+                  }}>
+                    {opcion}
+                  </Text>
+                  {isActive && (
+                    <Text style={{ fontSize: 9, color: '#99f6e4', marginTop: 1 }}>
+                      {opcion === 'TEA' ? 'Efectiva Anual'
+                        : opcion === 'TEM' ? 'Efectiva Mensual'
+                        : 'Nominal Anual'}
+                    </Text>
+                  )}
+                </Pressable>
+              );
+            })}
           </View>
 
           {/* Entidad Bancaria */}

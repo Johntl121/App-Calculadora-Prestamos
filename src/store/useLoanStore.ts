@@ -5,12 +5,12 @@ import { generateAmortizationTable } from '../utils/loanMath';
 interface LoanStore extends LoanParameters {
   moneda: string;
   amortizationTable: AmortizationRow[];
-  bancoSeleccionado: string | null;  // NUEVO
+  bancoSeleccionado: string | null;
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
   resetStore: () => void;
-  applyBankPreset: (bancoId: string) => void;  // NUEVO
+  applyBankPreset: (bancoId: string) => void;
 }
 
 const BANK_PRESETS: Record<string, string> = {
@@ -20,13 +20,11 @@ const BANK_PRESETS: Record<string, string> = {
   'Scotiabank': '0.105',
 };
 
-// Variables inicialmente vacías para que el TextInput actúe con placeholder.
 const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string | null } = {
   monto: '',
   tasaInteres: '',
-  esAnual: true,
+  tipoTasaFija: 'TEA',
   plazoMeses: '',
-  tipoTasa: 'efectiva',
   seguroDesgravamenRateMensual: '',
   fechaDesembolso: new Date(),
   moneda: 'S/',
@@ -41,23 +39,20 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
     set((state) => {
       const updates: any = { [key]: value };
       if (key === 'seguroDesgravamenRateMensual') {
-        updates.bancoSeleccionado = null; // Quitar preset si el usuario escribe a mano
+        updates.bancoSeleccionado = null;
       }
       return { ...state, ...updates };
     });
   },
 
-  setMoneda: (moneda) => {
-    set({ moneda });
-  },
+  setMoneda: (moneda) => set({ moneda }),
 
   calculateLoan: () => {
     const {
       monto,
       tasaInteres,
-      esAnual,
+      tipoTasaFija,
       plazoMeses,
-      tipoTasa,
       seguroDesgravamenRateMensual,
       fechaDesembolso,
     } = get();
@@ -65,9 +60,8 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
     const result = generateAmortizationTable({
       monto,
       tasaInteres,
-      esAnual,
+      tipoTasaFija,
       plazoMeses,
-      tipoTasa,
       seguroDesgravamenRateMensual,
       fechaDesembolso,
     });
