@@ -48,10 +48,6 @@ html, body {
         displayMode={true}
         inlineStyle={inlineStyle}
         style={{ flex: 1, backgroundColor: 'transparent' }}
-        androidLayerType="software"
-        scrollEnabled={false}
-        showsVerticalScrollIndicator={false}
-        showsHorizontalScrollIndicator={false}
       />
     </View>
   );
