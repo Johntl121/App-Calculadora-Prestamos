@@ -246,7 +246,11 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── FORMULARIO ─────────────────────────────────────────────────── */}
-        <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5">
+        <View
+          pointerEvents={isCalculated ? 'none' : 'auto'}
+          className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5"
+          style={{ opacity: isCalculated ? 0.6 : 1 }}
+        >
 
           {/* Moneda */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">MONEDA</Text>
@@ -409,15 +413,17 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── BOTÓN CALCULAR ─────────────────────────────────────────────── */}
-        <Pressable
-          onPress={handleCalcular}
-          className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
-          style={{ backgroundColor: '#0f766e' }}
-        >
-          <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
-            CALCULAR PRÉSTAMO
-          </Text>
-        </Pressable>
+        {!isCalculated && (
+          <Pressable
+            onPress={handleCalcular}
+            className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
+            style={{ backgroundColor: '#0f766e' }}
+          >
+            <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
+              CALCULAR PRÉSTAMO
+            </Text>
+          </Pressable>
+        )}
 
         {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
         {isCalculated && amortizationTable.length > 0 && (
