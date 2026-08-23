@@ -10,6 +10,7 @@ interface LoanStore extends LoanParameters {
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
   resetStore: () => void;
+  newSimulation: () => void;
   applyBankPreset: (bancoId: string) => void;
 }
 
@@ -74,6 +75,14 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
 
   resetStore: () => {
     set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [] });
+  },
+
+  newSimulation: () => {
+    set({
+      monto: '',
+      plazoMeses: '',
+      amortizationTable: [],
+    });
   },
 
   applyBankPreset: (bancoId) => {

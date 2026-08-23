@@ -4,7 +4,7 @@ import * as Print from 'expo-print';
 import { Link } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useColorScheme } from 'nativewind';
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef } from 'react';
 import {
   Modal,
   Pressable,
@@ -30,6 +30,7 @@ const CURRENCIES = ['S/', '$', '€'];
 export default function LoanCalculatorScreen() {
   const insets = useSafeAreaInsets();
   const { colorScheme, toggleColorScheme } = useColorScheme();
+  const scrollRef = useRef<ScrollView>(null);
 
   const {
     monto,
@@ -45,6 +46,7 @@ export default function LoanCalculatorScreen() {
     setMoneda,
     calculateLoan,
     resetStore,
+    newSimulation,
     applyBankPreset,
   } = useLoanStore();
 
@@ -86,6 +88,18 @@ export default function LoanCalculatorScreen() {
   const handleCalcular = () => {
     calculateLoan();
     setIsCalculated(true);
+  };
+
+  const handleNuevaSimulacion = () => {
+    newSimulation();
+    setIsCalculated(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
+  const handleLimpiarTodo = () => {
+    resetStore();
+    setIsCalculated(false);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
 
   /* ── PDF estilo BCP ───────────────────────────────────────────────────────── */
@@ -233,6 +247,7 @@ export default function LoanCalculatorScreen() {
     <View className="flex-1 bg-slate-100 dark:bg-slate-950" style={{ paddingTop: insets.top }}>
 
       <ScrollView
+        ref={scrollRef}
         className="flex-1 px-5 pt-6 pb-24"
         contentContainerStyle={{ paddingBottom: 20 }}
         keyboardShouldPersistTaps="handled"
@@ -532,17 +547,30 @@ export default function LoanCalculatorScreen() {
               </Pressable>
             </View>
 
-            {/* Botón Reinicio Rectangular */}
-            <Pressable
-              onPress={resetStore}
-              className="rounded-2xl py-4 flex-row items-center justify-center border border-slate-300 dark:border-slate-800 mb-10"
-              style={{ backgroundColor: isDark ? 'transparent' : '#f8fafc' }}
-            >
-              <Ionicons name="refresh-outline" size={20} color={isDark ? '#94a3b8' : '#64748b'} style={{ marginRight: 8 }} />
-              <Text style={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: '700', fontSize: 15 }}>
-                Nueva Simulación / Limpiar
-              </Text>
-            </Pressable>
+            {/* Botones de Acción Posterior al Cálculo */}
+            <View className="gap-3 mb-10">
+              {/* Botón Nueva Simulación (Mantiene Tasa y Configuración) */}
+              <Pressable
+                onPress={handleNuevaSimulacion}
+                className="rounded-2xl py-4 flex-row items-center justify-center border border-teal-600/30 bg-teal-50 dark:bg-teal-950/40"
+              >
+                <Ionicons name="refresh-outline" size={20} color={isDark ? '#5eead4' : '#0f766e'} style={{ marginRight: 8 }} />
+                <Text style={{ color: isDark ? '#5eead4' : '#0f766e', fontWeight: '700', fontSize: 15 }}>
+                  Nueva Simulación (Mantener Tasa)
+                </Text>
+              </Pressable>
+
+              {/* Botón Limpiar Todo */}
+              <Pressable
+                onPress={handleLimpiarTodo}
+                className="rounded-2xl py-3 flex-row items-center justify-center"
+              >
+                <Ionicons name="trash-outline" size={16} color={isDark ? '#64748b' : '#94a3b8'} style={{ marginRight: 6 }} />
+                <Text style={{ color: isDark ? '#64748b' : '#94a3b8', fontWeight: '600', fontSize: 14 }}>
+                  Limpiar todos los campos
+                </Text>
+              </Pressable>
+            </View>
           </View>
         )}
       </ScrollView>
