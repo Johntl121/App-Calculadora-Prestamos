@@ -5,6 +5,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
 import { AmortizationRow } from '../../src/types';
+import AmortizationChart from '../../src/components/AmortizationChart';
 
 const fmt = (value: number) =>
   value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -106,6 +107,11 @@ export default function AmortizationTableScreen() {
           Plan de Amortización
         </Text>
       </View>
+
+      {/* Gráfico Visual */}
+      {amortizationTable.length > 0 && (
+        <AmortizationChart data={amortizationTable} />
+      )}
 
       {/* Cabecera de la tabla — orden BCP */}
       {amortizationTable.length > 0 && (
