@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AmortizationRow, LoanParameters } from '../types';
 import { generateAmortizationTable, calculateTCEA } from '../utils/loanMath';
 
@@ -32,12 +34,15 @@ const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string
   fechaDesembolso: new Date(),
   moneda: 'S/',
   bancoSeleccionado: null,
+  prepago: undefined,
 };
 
-export const useLoanStore = create<LoanStore>((set, get) => ({
-  ...initialState,
-  amortizationTable: [],
-  tcea: 0,
+export const useLoanStore = create<LoanStore>()(
+  persist(
+    (set, get) => ({
+      ...initialState,
+      amortizationTable: [],
+      tcea: 0,
 
   updateParameter: (key, value) => {
     set((state) => {
@@ -60,6 +65,7 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
       plazoMeses,
       seguroDesgravamenRateMensual,
       fechaDesembolso,
+      prepago,
     } = get();
 
     const result = generateAmortizationTable({
@@ -70,6 +76,7 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
       plazoMeses,
       seguroDesgravamenRateMensual,
       fechaDesembolso,
+      prepago,
     });
 
     const tcea = calculateTCEA(parseFloat(monto) || 0, result);
@@ -96,4 +103,21 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
       set({ bancoSeleccionado: bancoId, seguroDesgravamenRateMensual: rate });
     }
   },
-}));
+}),
+    {
+      name: 'loan-store',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        monto: state.monto,
+        tasaInteres: state.tasaInteres,
+        tipoTasaFija: state.tipoTasaFija,
+        tipoCalendario: state.tipoCalendario,
+        plazoMeses: state.plazoMeses,
+        seguroDesgravamenRateMensual: state.seguroDesgravamenRateMensual,
+        moneda: state.moneda,
+        bancoSeleccionado: state.bancoSeleccionado,
+        prepago: state.prepago,
+      }),
+    }
+  )
+);

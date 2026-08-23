@@ -9,6 +9,11 @@ export interface LoanParameters {
   plazoMeses: string;
   seguroDesgravamenRateMensual: string;
   fechaDesembolso: Date;
+  prepago?: {
+    mes: number;
+    monto: number;
+    tipo: 'reducir_cuota' | 'reducir_plazo';
+  };
 }
 
 /**

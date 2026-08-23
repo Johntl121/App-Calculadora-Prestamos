@@ -114,9 +114,12 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     saldoRemanente: numMonto.toNumber(),
   });
 
+  let cuotaFija = cuotaTotalFija;
+
   for (let i = 1; i <= numPlazo; i++) {
     const fechaAnterior = fechaVencimiento(fechaDesembolso, i - 1);
     const fechaActual   = fechaVencimiento(fechaDesembolso, i);
+    
     // Días del período según el tipo de calendario elegido
     const dias = tipoCalendario === 'comercial'
       ? 30
@@ -124,23 +127,45 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
 
     const interesMes = saldo.times(new Decimal(1).plus(TED).pow(dias).minus(1));
     const seguroMes  = saldo.times(TSD).times(new Decimal(dias).div(30));
-    let   amortMes   = cuotaTotalFija.minus(interesMes).minus(seguroMes);
+    let   amortMes   = cuotaFija.minus(interesMes).minus(seguroMes);
 
-    // Último período: cierra el saldo exactamente a 0
-    if (i === numPlazo) amortMes = saldo;
+    // Si la amortización supera el saldo, ajustamos (suele pasar en reducir_plazo)
+    if (i === numPlazo || amortMes.gte(saldo)) {
+      amortMes = saldo;
+    }
 
     saldo = saldo.minus(amortMes);
+    let prepagoRealizado = new Decimal(0);
+
+    // Evaluar si en este mes hay un prepago
+    if (params.prepago && params.prepago.mes === i) {
+      const prepagoMonto = new Decimal(params.prepago.monto);
+      const prepagoEfectivo = Decimal.min(prepagoMonto, saldo); // No prepagar más del saldo
+      saldo = saldo.minus(prepagoEfectivo);
+      prepagoRealizado = prepagoEfectivo;
+
+      if (saldo.gt(0) && params.prepago.tipo === 'reducir_cuota') {
+        const periodosRestantes = numPlazo - i;
+        if (periodosRestantes > 0) {
+          const factor = new Decimal(1).plus(J).pow(periodosRestantes);
+          cuotaFija = saldo.times(J).times(factor).div(factor.minus(1));
+        }
+      }
+    }
+
     if (saldo.abs().lt(0.005)) saldo = new Decimal(0);
 
     result.push({
       mes: i,
       fecha: formatDate(fechaActual),
-      cuotaTotal: interesMes.plus(seguroMes).plus(amortMes).toNumber(),
+      cuotaTotal: interesMes.plus(seguroMes).plus(amortMes).plus(prepagoRealizado).toNumber(),
       interesPagado: interesMes.toNumber(),
       seguroDesgravamen: seguroMes.toNumber(),
-      capitalAmortizado: amortMes.toNumber(),
+      capitalAmortizado: amortMes.plus(prepagoRealizado).toNumber(),
       saldoRemanente: saldo.toNumber(),
     });
+
+    if (saldo.isZero()) break;
   }
 
   return result;

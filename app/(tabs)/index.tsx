@@ -18,6 +18,7 @@ import { TextInputMask } from 'react-native-masked-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
 import LaTeXView from '../../src/components/LaTeXView';
+import PrepaymentModal from '../../src/components/PrepaymentModal';
 
 const formatCurrency = (value: number, symbol: string) => {
   return `${symbol} ${(value || 0).toLocaleString('en-US', {
@@ -55,6 +56,7 @@ export default function LoanCalculatorScreen() {
   const [isCalculated, setIsCalculated] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [showFormulas, setShowFormulas] = useState(false);
+  const [prepagoModalVisible, setPrepagoModalVisible] = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
@@ -573,6 +575,17 @@ export default function LoanCalculatorScreen() {
               </Link>
 
               <Pressable
+                className="rounded-2xl py-4 items-center justify-center flex-row mb-3 border border-teal-700/50"
+                style={{ backgroundColor: '#134e4a' }}
+                onPress={() => setPrepagoModalVisible(true)}
+              >
+                <Ionicons name="cash-outline" size={20} color="#5eead4" style={{ marginRight: 8 }} />
+                <Text style={{ color: '#5eead4', fontWeight: '700', fontSize: 15 }}>
+                  Simular Pago Adelantado
+                </Text>
+              </Pressable>
+
+              <Pressable
                 className="rounded-2xl py-4 items-center justify-center flex-row"
                 style={{ backgroundColor: '#1e293b' }}
                 onPress={generatePDF}
@@ -629,6 +642,12 @@ export default function LoanCalculatorScreen() {
       >
         <Ionicons name="information-circle-outline" size={20} color={isDark ? '#5eead4' : '#0f766e'} />
       </Pressable>
+
+      {/* ── MODAL DE PREPAGO ──────────────────────────────────────────────── */}
+      <PrepaymentModal 
+        visible={prepagoModalVisible} 
+        onClose={() => setPrepagoModalVisible(false)} 
+      />
 
       {/* ── MODAL GUIA DEL SIMULADOR ───────────────────────────────────────── */}
       <Modal
