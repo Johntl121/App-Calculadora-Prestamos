@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
-import React from 'react';
+import React, { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
@@ -19,6 +19,7 @@ export default function AmortizationTableScreen() {
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   const renderItem = ({ item, index }: { item: AmortizationRow; index: number }) => {
     const isDisembolso = item.mes === 0;
@@ -108,13 +109,33 @@ export default function AmortizationTableScreen() {
         </Text>
       </View>
 
-      {/* Gráfico Visual */}
+      {/* Toggle Tabla vs Gráfico */}
       {amortizationTable.length > 0 && (
-        <AmortizationChart data={amortizationTable} />
+        <View style={{ flexDirection: 'row', marginHorizontal: 24, marginBottom: 16, backgroundColor: isDark ? '#1e293b' : '#e2e8f0', borderRadius: 12, padding: 4 }}>
+          <Pressable 
+            onPress={() => setViewMode('table')}
+            style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: viewMode === 'table' ? (isDark ? '#0f766e' : '#ffffff') : 'transparent', alignItems: 'center', elevation: viewMode === 'table' ? 2 : 0, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }}
+          >
+            <Text style={{ fontWeight: 'bold', fontSize: 13, color: viewMode === 'table' ? (isDark ? '#ffffff' : '#0f172a') : (isDark ? '#94a3b8' : '#64748b') }}>Tabla de Detalles</Text>
+          </Pressable>
+          <Pressable 
+            onPress={() => setViewMode('chart')}
+            style={{ flex: 1, paddingVertical: 10, borderRadius: 8, backgroundColor: viewMode === 'chart' ? (isDark ? '#0f766e' : '#ffffff') : 'transparent', alignItems: 'center', elevation: viewMode === 'chart' ? 2 : 0, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 2, shadowOffset: { width: 0, height: 1 } }}
+          >
+            <Text style={{ fontWeight: 'bold', fontSize: 13, color: viewMode === 'chart' ? (isDark ? '#ffffff' : '#0f172a') : (isDark ? '#94a3b8' : '#64748b') }}>Gráfico Visual</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Gráfico Visual */}
+      {viewMode === 'chart' && amortizationTable.length > 0 && (
+        <View style={{ flex: 1, paddingTop: 32 }}>
+          <AmortizationChart data={amortizationTable} />
+        </View>
       )}
 
       {/* Cabecera de la tabla — orden BCP */}
-      {amortizationTable.length > 0 && (
+      {viewMode === 'table' && amortizationTable.length > 0 && (
         <View style={[styles.headerRow, { marginHorizontal: 16 }]}>
           <Text style={[styles.headerCell, { flex: F.mes,    textAlign: 'center' }]}>Mes</Text>
           <Text style={[styles.headerCell, { flex: F.fecha,  textAlign: 'center' }]}>Vcto.</Text>
@@ -127,23 +148,25 @@ export default function AmortizationTableScreen() {
       )}
 
       {/* Lista de filas */}
-      <FlatList
-        data={amortizationTable}
-        keyExtractor={(item) => item.mes.toString()}
-        renderItem={renderItem}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={amortizationTable.length === 0 ? { flexGrow: 1 } : { paddingBottom: 120 }}
-        showsVerticalScrollIndicator={false}
-        className="flex-1"
-        ListFooterComponent={
-          amortizationTable.length > 0 ? (
-            <View style={{
-              height: 24, backgroundColor: isDark ? '#1e293b' : '#ffffff',
-              marginHorizontal: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 32,
-            }} />
-          ) : null
-        }
-      />
+      {viewMode === 'table' && (
+        <FlatList
+          data={amortizationTable}
+          keyExtractor={(item) => item.mes.toString()}
+          renderItem={renderItem}
+          ListEmptyComponent={renderEmpty}
+          contentContainerStyle={amortizationTable.length === 0 ? { flexGrow: 1 } : { paddingBottom: 120 }}
+          showsVerticalScrollIndicator={false}
+          className="flex-1"
+          ListFooterComponent={
+            amortizationTable.length > 0 ? (
+              <View style={{
+                height: 24, backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                marginHorizontal: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 32,
+              }} />
+            ) : null
+          }
+        />
+      )}
 
       {/* Botón Modo Oscuro */}
       <Pressable
