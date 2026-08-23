@@ -64,7 +64,14 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MES DEL PREPAGO (1 - {maxMeses - 1})</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
             <TextInput
-              className="flex-1 text-xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 22,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 14,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" 
               value={mes} 
               onChangeText={setMes}
@@ -78,7 +85,14 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
             <TextInputMask
               type="money"
               options={{ precision: 2, separator: '.', delimiter: ',', unit: '', suffixUnit: '' }}
-              className="flex-1 text-xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 22,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 14,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" 
               value={monto} 
               includeRawValueInChangeText={true}

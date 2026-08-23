@@ -282,7 +282,7 @@ export default function LoanCalculatorScreen() {
           {/* Monto */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MONTO DEL PRÉSTAMO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
-            <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 mr-2">{moneda}</Text>
+            <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginRight: 8 }}>{moneda}</Text>
             <TextInputMask
               type="money"
               options={{
@@ -292,7 +292,14 @@ export default function LoanCalculatorScreen() {
                 unit: '',
                 suffixUnit: ''
               }}
-              className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 26,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 16,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" 
               value={monto} 
               includeRawValueInChangeText={true}
@@ -317,7 +324,14 @@ export default function LoanCalculatorScreen() {
                 unit: '',
                 suffixUnit: ''
               }}
-              className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 26,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 16,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" 
               value={tasaInteres} 
               includeRawValueInChangeText={true}
@@ -328,7 +342,7 @@ export default function LoanCalculatorScreen() {
               placeholder="21.50" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
-            <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
+            <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
           </View>
 
           {/* Segmented Control: TEA / TEM / TNA */}
@@ -436,7 +450,14 @@ export default function LoanCalculatorScreen() {
                 unit: '',
                 suffixUnit: ''
               }}
-              className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 26,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 16,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" 
               value={seguroDesgravamenRateMensual} 
               includeRawValueInChangeText={true}
@@ -447,18 +468,25 @@ export default function LoanCalculatorScreen() {
               placeholder="0.05" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
-            <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
+            <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
           </View>
 
           {/* Plazo */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">PLAZO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4">
             <TextInput
-              className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
+              style={{
+                flex: 1,
+                fontSize: 26,
+                fontWeight: 'bold',
+                color: isDark ? '#ffffff' : '#0f172a',
+                paddingVertical: 16,
+                paddingHorizontal: 0,
+              }}
               keyboardType="numeric" maxLength={3} value={plazoMeses} onChangeText={handlePlazo}
               placeholder="24" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
-            <Text className="text-lg font-bold text-slate-400 dark:text-slate-500 ml-2">meses</Text>
+            <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>meses</Text>
           </View>
         </View>
 
