@@ -582,10 +582,6 @@ export default function LoanCalculatorScreen() {
               </Text>
               <Text className="text-teal-400 text-center text-sm font-medium mb-4">
                 por {plazoMeses} meses · incluye seguro desgravamen
-                {'\n'}
-                <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '400' }}>
-                  * La última cuota puede variar por ajuste de cierre a saldo 0.
-                </Text>
               </Text>
 
               {tcea > 0 && (
@@ -802,6 +798,23 @@ export default function LoanCalculatorScreen() {
                 </Text>
               </View>
 
+              {/* ── Pago Adelantado ─────────────────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                borderRadius: 16, padding: 18, marginBottom: 14,
+                borderLeftWidth: 3, borderLeftColor: '#10b981',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <Ionicons name="cash-outline" size={18} color="#10b981" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    Pago Adelantado (Prepago)
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                  Un prepago es un abono extra directo al capital. Tienes dos opciones: <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Terminar Antes"</Text> (reduces el plazo total manteniendo tu cuota) o <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Pagar Menos al Mes"</Text> (reduces tu cuota mensual manteniendo tu plazo). Ejemplo: Si abonas S/ 5,000 extra en el mes 6, la app recalcula todo al instante para que veas cuánto ahorras en intereses.
+                </Text>
+              </View>
+
               {/* ── TEA vs TCEA ─────────────────────────────── */}
               <View style={{
                 backgroundColor: isDark ? '#1e293b' : '#f8fafc',
@@ -815,9 +828,7 @@ export default function LoanCalculatorScreen() {
                   </Text>
                 </View>
                 <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TEA</Text> es el costo puro de tu préstamo.{' '}
-                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TCEA</Text> es la TEA + el Seguro de Desgravamen.{' '}
-                  Ingresa tu TEA para que la simulación sea exacta.
+                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TEA</Text> es el costo puro de tu préstamo por intereses. La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TCEA</Text> refleja el costo total, incluyendo el seguro de desgravamen. Es un valor <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>ESTIMADO</Text> (referencial) ya que puede variar levemente frente a tu banco por reglas de redondeo exactas.
                 </Text>
               </View>
 
@@ -838,6 +849,23 @@ export default function LoanCalculatorScreen() {
                 </Text>
               </View>
 
+              {/* ── Calendario y Última Cuota ───────────────── */}
+              <View style={{
+                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                borderRadius: 16, padding: 18, marginBottom: 14,
+                borderLeftWidth: 3, borderLeftColor: '#ec4899',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                  <Ionicons name="calendar-outline" size={18} color="#ec4899" />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    Calendario y Última Cuota
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                  El modo <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Mes Comercial"</Text> asume 30 días fijos. El <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Calendario Real"</Text> usa los días exactos entre pagos (28, 30, 31). En el calendario real, el interés fluctúa mes a mes, lo que causa que la <Text style={{ fontStyle: 'italic' }}>última cuota varíe ligeramente</Text> para ajustar tu saldo final exactamente a S/ 0.00.
+                </Text>
+              </View>
+
               {/* ── Aviso Legal ──────────────────────────────── */}
               <View style={{
                 backgroundColor: isDark ? '#0f172a' : '#fafafa',
@@ -851,7 +879,7 @@ export default function LoanCalculatorScreen() {
                   </Text>
                 </View>
                 <Text style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8', lineHeight: 18 }}>
-                  Los resultados son simulaciones referenciales. Los montos finales pueden variar ligeramente por redondeos o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
+                  Los resultados y la TCEA mostrada son simulaciones referenciales. Los montos finales pueden variar ligeramente por reglas de redondeo normativo de la SBS, cobros de portes o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
                 </Text>
               </View>
 
@@ -921,7 +949,7 @@ export default function LoanCalculatorScreen() {
                           paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
                         }}>TNA</Text>
                         <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
-                          Préstamos informales, comerciales de corto plazo o prestamistas privados. No asume capitalización.
+                          Tasa sin capitalización de intereses. Común en tarjetas de crédito y algunos créditos de consumo de corto plazo. Si tu banco te la da, pídeles también la TEA equivalente para comparar bien.
                         </Text>
                       </View>
                     </View>
