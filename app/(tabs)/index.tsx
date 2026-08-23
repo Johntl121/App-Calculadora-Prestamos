@@ -14,6 +14,7 @@ import {
   View,
   LayoutAnimation,
 } from 'react-native';
+import { TextInputMask } from 'react-native-masked-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
 import LaTeXView from '../../src/components/LaTeXView';
@@ -41,6 +42,7 @@ export default function LoanCalculatorScreen() {
     seguroDesgravamenRateMensual,
     moneda,
     amortizationTable,
+    tcea,
     bancoSeleccionado,
     updateParameter,
     setMoneda,
@@ -60,24 +62,6 @@ export default function LoanCalculatorScreen() {
   }, [amortizationTable]);
 
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
-
-  const handleMonto = (val: string) => {
-    const clean = val.replace(/[^0-9.]/g, '');
-    updateParameter('monto', clean);
-    setIsCalculated(false);
-  };
-
-  const handleTasa = (val: string) => {
-    const clean = val.replace(/[^0-9.]/g, '');
-    updateParameter('tasaInteres', clean);
-    setIsCalculated(false);
-  };
-
-  const handleDesgravamen = (val: string) => {
-    const clean = val.replace(/[^0-9.]/g, '');
-    updateParameter('seguroDesgravamenRateMensual', clean);
-    setIsCalculated(false);
-  };
 
   const handlePlazo = (val: string) => {
     const clean = val.replace(/[^0-9]/g, '');
@@ -297,20 +281,50 @@ export default function LoanCalculatorScreen() {
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MONTO DEL PRÉSTAMO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 mr-2">{moneda}</Text>
-            <TextInput
+            <TextInputMask
+              type="money"
+              options={{
+                precision: 2,
+                separator: '.',
+                delimiter: ',',
+                unit: '',
+                suffixUnit: ''
+              }}
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={monto} onChangeText={handleMonto}
-              placeholder="25,000" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" 
+              value={monto} 
+              includeRawValueInChangeText={true}
+              onChangeText={(_, rawText) => {
+                updateParameter('monto', rawText || '');
+                setIsCalculated(false);
+              }}
+              placeholder="25,000.00" 
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
           </View>
 
           {/* Tasa de Interés */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">TASA DE INTERÉS</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
-            <TextInput
+            <TextInputMask
+              type="money"
+              options={{
+                precision: 2,
+                separator: '.',
+                delimiter: '',
+                unit: '',
+                suffixUnit: ''
+              }}
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={tasaInteres} onChangeText={handleTasa}
-              placeholder="21.50" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" 
+              value={tasaInteres} 
+              includeRawValueInChangeText={true}
+              onChangeText={(_, rawText) => {
+                updateParameter('tasaInteres', rawText || '');
+                setIsCalculated(false);
+              }}
+              placeholder="21.50" 
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
@@ -411,10 +425,25 @@ export default function LoanCalculatorScreen() {
             SEGURO DESGRAVAMEN (% MENSUAL)
           </Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
-            <TextInput
+            <TextInputMask
+              type="money"
+              options={{
+                precision: 2,
+                separator: '.',
+                delimiter: '',
+                unit: '',
+                suffixUnit: ''
+              }}
               className="flex-1 text-2xl font-bold text-slate-950 dark:text-white py-4 p-0"
-              keyboardType="numeric" value={seguroDesgravamenRateMensual} onChangeText={handleDesgravamen}
-              placeholder="0.05" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric" 
+              value={seguroDesgravamenRateMensual} 
+              includeRawValueInChangeText={true}
+              onChangeText={(_, rawText) => {
+                updateParameter('seguroDesgravamenRateMensual', rawText || '');
+                setIsCalculated(false);
+              }}
+              placeholder="0.05" 
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text className="text-2xl font-bold text-slate-400 dark:text-slate-500 ml-2">%</Text>
           </View>
@@ -503,9 +532,17 @@ export default function LoanCalculatorScreen() {
               <Text className="text-[52px] font-black text-white text-center leading-tight mb-1" numberOfLines={1}>
                 {formatCurrency(cuotaMensualEstimada, moneda)}
               </Text>
-              <Text className="text-teal-400 text-center text-sm font-medium mb-6">
+              <Text className="text-teal-400 text-center text-sm font-medium mb-4">
                 por {plazoMeses} meses · incluye seguro desgravamen
               </Text>
+
+              {tcea > 0 && (
+                <View className="bg-teal-900 rounded-full py-2 px-4 self-center mb-6 border border-teal-700">
+                  <Text className="text-teal-100 font-bold text-xs tracking-wider">
+                    TCEA APROXIMADA: {tcea.toFixed(2)}%
+                  </Text>
+                </View>
+              )}
 
               <View className="flex-row justify-between mb-8">
                 <View className="flex-1 items-center">

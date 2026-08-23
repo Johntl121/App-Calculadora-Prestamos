@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { AmortizationRow, LoanParameters } from '../types';
-import { generateAmortizationTable } from '../utils/loanMath';
+import { generateAmortizationTable, calculateTCEA } from '../utils/loanMath';
 
 interface LoanStore extends LoanParameters {
   moneda: string;
   amortizationTable: AmortizationRow[];
+  tcea: number;
   bancoSeleccionado: string | null;
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
@@ -36,6 +37,7 @@ const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string
 export const useLoanStore = create<LoanStore>((set, get) => ({
   ...initialState,
   amortizationTable: [],
+  tcea: 0,
 
   updateParameter: (key, value) => {
     set((state) => {
@@ -70,11 +72,13 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
       fechaDesembolso,
     });
 
-    set({ amortizationTable: result });
+    const tcea = calculateTCEA(parseFloat(monto) || 0, result);
+
+    set({ amortizationTable: result, tcea });
   },
 
   resetStore: () => {
-    set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [] });
+    set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [], tcea: 0 });
   },
 
   newSimulation: () => {
@@ -82,6 +86,7 @@ export const useLoanStore = create<LoanStore>((set, get) => ({
       monto: '',
       plazoMeses: '',
       amortizationTable: [],
+      tcea: 0,
     });
   },
 

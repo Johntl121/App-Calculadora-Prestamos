@@ -145,3 +145,37 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
 
   return result;
 }
+
+/**
+ * Calcula la Tasa de Costo Efectivo Anual (TCEA) usando aproximación binaria (TIR).
+ * @param montoInicial El monto del préstamo desembolsado
+ * @param table La tabla de amortización generada
+ * @returns TCEA en porcentaje (ej: 21.5 para 21.5%)
+ */
+export function calculateTCEA(montoInicial: number, table: AmortizationRow[]): number {
+  if (!table || table.length <= 1 || montoInicial <= 0) return 0;
+  
+  const cashFlows = table.filter(r => r.mes > 0).map(r => r.cuotaTotal);
+  
+  let low = 0.0;
+  let high = 1.0; // 100% mensual como techo (suficiente para préstamos normales)
+  let tir = 0;
+  
+  // 50 iteraciones de bisección dan precisión suficiente para decimales
+  for (let i = 0; i < 50; i++) {
+    tir = (low + high) / 2;
+    let npv = 0;
+    for (let j = 0; j < cashFlows.length; j++) {
+      npv += cashFlows[j] / Math.pow(1 + tir, j + 1);
+    }
+    
+    if (npv > montoInicial) {
+      low = tir;
+    } else {
+      high = tir;
+    }
+  }
+  
+  const tcea = Math.pow(1 + tir, 12) - 1;
+  return tcea * 100;
+}
