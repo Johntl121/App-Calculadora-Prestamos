@@ -68,7 +68,6 @@ export default function LoanCalculatorScreen() {
   const handlePlazo = (val: string) => {
     const clean = val.replace(/[^0-9]/g, '');
     updateParameter('plazoMeses', clean);
-    setIsCalculated(false);
   };
 
   const handleCalcular = () => {
@@ -251,11 +250,7 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── FORMULARIO ─────────────────────────────────────────────────── */}
-        <View
-          pointerEvents={isCalculated ? 'none' : 'auto'}
-          className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5"
-          style={{ opacity: isCalculated ? 0.6 : 1 }}
-        >
+        <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5">
 
           {/* Moneda */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">MONEDA</Text>
@@ -305,7 +300,6 @@ export default function LoanCalculatorScreen() {
               includeRawValueInChangeText={true}
               onChangeText={(_, rawText) => {
                 updateParameter('monto', rawText || '');
-                setIsCalculated(false);
               }}
               placeholder="25,000.00" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
@@ -337,7 +331,6 @@ export default function LoanCalculatorScreen() {
               includeRawValueInChangeText={true}
               onChangeText={(_, rawText) => {
                 updateParameter('tasaInteres', rawText || '');
-                setIsCalculated(false);
               }}
               placeholder="21.50" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
@@ -463,7 +456,6 @@ export default function LoanCalculatorScreen() {
               includeRawValueInChangeText={true}
               onChangeText={(_, rawText) => {
                 updateParameter('seguroDesgravamenRateMensual', rawText || '');
-                setIsCalculated(false);
               }}
               placeholder="0.05" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
@@ -483,8 +475,12 @@ export default function LoanCalculatorScreen() {
                 paddingVertical: 16,
                 paddingHorizontal: 0,
               }}
-              keyboardType="numeric" maxLength={3} value={plazoMeses} onChangeText={handlePlazo}
-              placeholder="24" placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+              keyboardType="numeric"
+              maxLength={3}
+              value={String(plazoMeses ?? '')}
+              onChangeText={handlePlazo}
+              placeholder="24"
+              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text style={{ fontSize: 20, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>meses</Text>
           </View>
@@ -540,17 +536,15 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── BOTÓN CALCULAR ─────────────────────────────────────────────── */}
-        {!isCalculated && (
-          <Pressable
-            onPress={handleCalcular}
-            className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
-            style={{ backgroundColor: '#0f766e' }}
-          >
-            <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
-              CALCULAR PRÉSTAMO
-            </Text>
-          </Pressable>
-        )}
+        <Pressable
+          onPress={handleCalcular}
+          className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
+          style={{ backgroundColor: '#0f766e' }}
+        >
+          <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
+            {isCalculated ? 'RECALCULAR PRÉSTAMO' : 'CALCULAR PRÉSTAMO'}
+          </Text>
+        </Pressable>
 
         {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
         {isCalculated && amortizationTable.length > 0 && (
