@@ -23,6 +23,7 @@ export default function AmortizationTableScreen() {
 
   const renderItem = ({ item, index }: { item: AmortizationRow; index: number }) => {
     const isDisembolso = item.mes === 0;
+    const isLast = index === amortizationTable.length - 1;
     const isZebra = index % 2 === 1;
     const rowBg = isDisembolso
       ? (isDark ? '#052e16' : '#f0fdf4')
@@ -36,7 +37,18 @@ export default function AmortizationTableScreen() {
     const tBold   = isDark ? '#f1f5f9' : '#0f172a';
 
     return (
-      <View style={[styles.row, { backgroundColor: rowBg, borderBottomColor: isDark ? '#0f172a' : '#f1f5f9' }]}>
+      <View
+        style={[
+          styles.row,
+          {
+            backgroundColor: rowBg,
+            borderBottomColor: isDark ? '#0f172a' : '#f1f5f9',
+            borderBottomWidth: isLast ? 0 : 1,
+            borderBottomLeftRadius: isLast ? 20 : 0,
+            borderBottomRightRadius: isLast ? 20 : 0,
+          },
+        ]}
+      >
         {/* Mes */}
         <Text style={[styles.cell, { flex: F.mes, color: isDisembolso ? tAccent : tMuted, fontWeight: 'bold', fontSize: 9, textAlign: 'center' }]}>
           {item.mes}
@@ -154,17 +166,13 @@ export default function AmortizationTableScreen() {
           keyExtractor={(item) => item.mes.toString()}
           renderItem={renderItem}
           ListEmptyComponent={renderEmpty}
-          contentContainerStyle={amortizationTable.length === 0 ? { flexGrow: 1 } : { paddingBottom: 120 }}
+          contentContainerStyle={
+            amortizationTable.length === 0
+              ? { flexGrow: 1 }
+              : { paddingBottom: Math.max(insets.bottom + 16, 24) }
+          }
           showsVerticalScrollIndicator={false}
           className="flex-1"
-          ListFooterComponent={
-            amortizationTable.length > 0 ? (
-              <View style={{
-                height: 24, backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                marginHorizontal: 16, borderBottomLeftRadius: 20, borderBottomRightRadius: 20, marginBottom: 32,
-              }} />
-            ) : null
-          }
         />
       )}
 
