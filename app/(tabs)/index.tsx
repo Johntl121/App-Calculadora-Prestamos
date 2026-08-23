@@ -159,17 +159,25 @@ export default function LoanCalculatorScreen() {
             </div>
 
             <div class="summary">
-              <div class="card"><div class="lbl">Monto Prestado</div><div class="val">${moneda} ${fn(numMonto)}</div></div>
-              <div class="card"><div class="lbl">Cuota Mensual</div><div class="val teal">${moneda} ${fn(cuotaMes1)}</div></div>
-              <div class="card"><div class="lbl">Total Intereses</div><div class="val">${moneda} ${fn(totalInteres)}</div></div>
-              <div class="card"><div class="lbl">Total Pagado</div><div class="val">${moneda} ${fn(totalCuotas)}</div></div>
+              <div class="card">
+                <div class="lbl">Préstamo</div>
+                <div class="val">${moneda} ${fn(numMonto)}</div>
+              </div>
+              <div class="card">
+                <div class="lbl">Cuota Mensual (Ref.)</div>
+                <div class="val teal">${moneda} ${fn(cuotaMes1)}</div>
+              </div>
+              <div class="card">
+                <div class="lbl">TCEA Estimada</div>
+                <div class="val">${tcea > 0 ? tcea.toFixed(2) + '%' : 'N/A'}</div>
+              </div>
             </div>
 
             <table>
               <thead>
                 <tr>
-                  <th style="text-align:center;">Mes</th>
-                  <th style="text-align:center;">Vcto.</th>
+                  <th>N°</th>
+                  <th>Fecha</th>
                   <th>Saldo Capital</th>
                   <th>Amortización</th>
                   <th>Interés</th>
@@ -177,21 +185,22 @@ export default function LoanCalculatorScreen() {
                   <th>Cuota Total</th>
                 </tr>
               </thead>
-              <tbody>${tableRows}</tbody>
+              <tbody>
+                ${tableRows}
+              </tbody>
               <tfoot>
                 <tr>
-                  <td colspan="3" style="text-align:left; padding-left:12px;">TOTALES</td>
-                  <td>${moneda} ${fn(totalAmort)}</td>
-                  <td>${moneda} ${fn(totalInteres)}</td>
-                  <td>${moneda} ${fn(totalSeguro)}</td>
-                  <td>${moneda} ${fn(totalCuotas)}</td>
+                  <td colspan="3" style="text-align:right;">TOTALES:</td>
+                  <td style="text-align:right;">${moneda} ${fn(totalAmort)}</td>
+                  <td style="text-align:right;">${moneda} ${fn(totalInteres)}</td>
+                  <td style="text-align:right;">${moneda} ${fn(totalSeguro)}</td>
+                  <td style="text-align:right;">${moneda} ${fn(totalCuotas)}</td>
                 </tr>
               </tfoot>
             </table>
 
             <div class="doc-footer">
-              Reporte generado el ${new Date().toLocaleDateString('es-PE', { year: 'numeric', month: 'long', day: 'numeric' })}
-              · Solo referencial, no constituye oferta crediticia.
+              Generado con Simulador de Préstamos Pro &bull; ${new Date().toLocaleDateString('es-PE')}
             </div>
           </body>
         </html>
@@ -567,12 +576,16 @@ export default function LoanCalculatorScreen() {
               </Text>
               <Text className="text-teal-400 text-center text-sm font-medium mb-4">
                 por {plazoMeses} meses · incluye seguro desgravamen
+                {'\n'}
+                <Text style={{ fontSize: 11, color: '#94a3b8', fontWeight: '400' }}>
+                  * La última cuota puede variar por ajuste de cierre a saldo 0.
+                </Text>
               </Text>
 
               {tcea > 0 && (
                 <View className="bg-teal-900 rounded-full py-2 px-4 self-center mb-6 border border-teal-700">
                   <Text className="text-teal-100 font-bold text-xs tracking-wider">
-                    TCEA APROXIMADA: {tcea.toFixed(2)}%
+                    TCEA ESTIMADA (Referencial): {tcea.toFixed(2)}%
                   </Text>
                 </View>
               )}
