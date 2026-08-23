@@ -66,7 +66,7 @@ export default function LoanCalculatorScreen() {
   /* ── Handlers ─────────────────────────────────────────────────────────────── */
 
   const handlePlazo = (val: string) => {
-    const clean = val.replace(/[^0-9]/g, '');
+    const clean = val.replace(/[^0-9]/g, '').slice(0, 3);
     updateParameter('plazoMeses', clean);
   };
 
@@ -250,7 +250,11 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── FORMULARIO ─────────────────────────────────────────────────── */}
-        <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5">
+        <View
+          pointerEvents={isCalculated ? 'none' : 'auto'}
+          className="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md dark:shadow-none shadow-slate-200/60 mb-5"
+          style={{ opacity: isCalculated ? 0.6 : 1 }}
+        >
 
           {/* Moneda */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3">MONEDA</Text>
@@ -465,18 +469,21 @@ export default function LoanCalculatorScreen() {
 
           {/* Plazo */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">PLAZO</Text>
-          <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4">
+          <View
+            className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4"
+            style={{ minHeight: 64, height: 64 }}
+          >
             <TextInput
               style={{
                 flex: 1,
                 fontSize: 26,
                 fontWeight: 'bold',
                 color: isDark ? '#ffffff' : '#0f172a',
-                paddingVertical: 16,
+                paddingVertical: 0,
                 paddingHorizontal: 0,
+                height: '100%',
               }}
-              keyboardType="numeric"
-              maxLength={3}
+              keyboardType="number-pad"
               value={String(plazoMeses ?? '')}
               onChangeText={handlePlazo}
               placeholder="24"
@@ -536,15 +543,17 @@ export default function LoanCalculatorScreen() {
         </View>
 
         {/* ── BOTÓN CALCULAR ─────────────────────────────────────────────── */}
-        <Pressable
-          onPress={handleCalcular}
-          className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
-          style={{ backgroundColor: '#0f766e' }}
-        >
-          <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
-            {isCalculated ? 'RECALCULAR PRÉSTAMO' : 'CALCULAR PRÉSTAMO'}
-          </Text>
-        </Pressable>
+        {!isCalculated && (
+          <Pressable
+            onPress={handleCalcular}
+            className="rounded-full py-5 items-center justify-center mb-5 shadow-lg shadow-teal-900/30"
+            style={{ backgroundColor: '#0f766e' }}
+          >
+            <Text style={{ color: '#ffffff', fontWeight: '900', fontSize: 16, letterSpacing: 1 }}>
+              CALCULAR PRÉSTAMO
+            </Text>
+          </Pressable>
+        )}
 
         {/* ── RESULTADOS ─────────────────────────────────────────────────── */}
         {isCalculated && amortizationTable.length > 0 && (
@@ -584,21 +593,31 @@ export default function LoanCalculatorScreen() {
                 </View>
               </View>
 
+              {/* Botón 1: Ver Tabla de Amortización (Botón Principal - Teal Sólido) */}
               <Link href="/explore" asChild onPress={() => { }}>
                 <Pressable
                   className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
-                  style={{ backgroundColor: '#115e59' }}
+                  style={{
+                    backgroundColor: '#0f766e',
+                    borderWidth: 1,
+                    borderColor: 'rgba(94, 234, 212, 0.25)',
+                  }}
                 >
-                  <Ionicons name="list-outline" size={20} color="#ccfbf1" style={{ marginRight: 8 }} />
-                  <Text style={{ color: '#ccfbf1', fontWeight: '700', fontSize: 15 }}>
+                  <Ionicons name="list-outline" size={20} color="#f0fdfa" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#f0fdfa', fontWeight: '700', fontSize: 15 }}>
                     Ver Tabla de Amortización
                   </Text>
                 </Pressable>
               </Link>
 
+              {/* Botón 2: Simular Pago Adelantado (Botón Secundario - Glass Teal con Borde) */}
               <Pressable
-                className="rounded-2xl py-4 items-center justify-center flex-row mb-3 border border-teal-700/50"
-                style={{ backgroundColor: '#134e4a' }}
+                className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
+                style={{
+                  backgroundColor: 'rgba(15, 118, 110, 0.35)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(94, 234, 212, 0.4)',
+                }}
                 onPress={() => setPrepagoModalVisible(true)}
               >
                 <Ionicons name="cash-outline" size={20} color="#5eead4" style={{ marginRight: 8 }} />
@@ -607,13 +626,23 @@ export default function LoanCalculatorScreen() {
                 </Text>
               </Pressable>
 
+              {/* Botón 3: Exportar a PDF (Rojo Sólido Vivo) */}
               <Pressable
                 className="rounded-2xl py-4 items-center justify-center flex-row"
-                style={{ backgroundColor: '#1e293b' }}
+                style={{
+                  backgroundColor: '#991b1b',
+                  borderWidth: 1,
+                  borderColor: '#ef4444',
+                }}
                 onPress={generatePDF}
               >
-                <Ionicons name="document-text-outline" size={20} color="#94a3b8" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#94a3b8', fontWeight: '700', fontSize: 15 }}>
+                <Ionicons
+                  name="document-text-outline"
+                  size={20}
+                  color="#ffffff"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15 }}>
                   Exportar a PDF
                 </Text>
               </Pressable>
@@ -621,10 +650,15 @@ export default function LoanCalculatorScreen() {
 
             {/* Botones de Acción Posterior al Cálculo */}
             <View className="gap-3 mb-10">
-              {/* Botón Nueva Simulación (Mantiene Tasa y Configuración) */}
+              {/* Botón 4: Nueva Simulación (Adaptable con excelente contraste) */}
               <Pressable
                 onPress={handleNuevaSimulacion}
-                className="rounded-2xl py-4 flex-row items-center justify-center border border-teal-600/30 bg-teal-50 dark:bg-teal-950/40"
+                className="rounded-2xl py-4 flex-row items-center justify-center shadow-sm"
+                style={{
+                  backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                  borderWidth: 1.5,
+                  borderColor: isDark ? '#334155' : '#0f766e',
+                }}
               >
                 <Ionicons name="refresh-outline" size={20} color={isDark ? '#5eead4' : '#0f766e'} style={{ marginRight: 8 }} />
                 <Text style={{ color: isDark ? '#5eead4' : '#0f766e', fontWeight: '700', fontSize: 15 }}>
