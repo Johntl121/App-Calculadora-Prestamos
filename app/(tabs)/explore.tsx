@@ -74,18 +74,24 @@ export default function AmortizationTableScreen() {
           {isDisembolso ? '-' : fmt(item.seguroDesgravamen)}
         </Text>
         {/* Cuota Total */}
-        <Text
-          style={[styles.cell, {
-            flex: F.cuota,
-            color: isDisembolso ? tMuted : tBold,
-            fontWeight: isDisembolso ? 'normal' : 'bold',
-            fontSize: isDisembolso ? 8 : 10,
-            textAlign: 'right',
-          }]}
-          numberOfLines={1}
-        >
-          {isDisembolso ? 'DESEMBOLSO' : `${moneda} ${fmt(item.cuotaTotal)}`}
-        </Text>
+        <View style={[styles.cell, { flex: F.cuota, alignItems: 'flex-end' }]}>
+          <Text
+            style={{
+              color: isDisembolso ? tMuted : tBold,
+              fontWeight: isDisembolso ? 'normal' : 'bold',
+              fontSize: isDisembolso ? 8 : 10,
+              textAlign: 'right',
+            }}
+            numberOfLines={1}
+          >
+            {isDisembolso ? 'DESEMBOLSO' : `${moneda} ${fmt(item.cuotaTotal)}`}
+          </Text>
+          {isLast && !isDisembolso && (
+            <Text style={{ fontSize: 7, color: tMuted, marginTop: 1, textAlign: 'right' }}>
+              (monto ajustado)
+            </Text>
+          )}
+        </View>
       </View>
     );
   };
