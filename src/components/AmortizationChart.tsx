@@ -39,6 +39,13 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
     return result;
   }, [data, isDark]);
 
+  const maxValue = useMemo(() => {
+    if (!data || data.length === 0) return 1000;
+    const maxCuota = Math.max(...data.map(r => r.cuotaTotal));
+    // Agregamos un 10% de margen superior para que no choque con el techo
+    return Math.ceil(maxCuota * 1.1);
+  }, [data]);
+
   if (!data || data.length <= 1) return null;
 
   return (
@@ -75,7 +82,7 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
         xAxisThickness={1}
         xAxisColor={isDark ? '#334155' : '#e2e8f0'}
         noOfSections={4}
-        stepValue={1000} // opcional, dependerá del monto
+        maxValue={maxValue}
         showValuesAsTopLabel={false}
         rulesColor={isDark ? '#1e293b' : '#f1f5f9'}
         xAxisLabelTextStyle={{ color: isDark ? '#64748b' : '#94a3b8', fontSize: 10 }}
