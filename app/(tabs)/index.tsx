@@ -13,6 +13,7 @@ import {
   TextInput,
   View,
   LayoutAnimation,
+  ActivityIndicator,
 } from 'react-native';
 import { TextInputMask } from 'react-native-masked-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -57,6 +58,7 @@ export default function LoanCalculatorScreen() {
   const [infoVisible, setInfoVisible] = useState(false);
   const [showFormulas, setShowFormulas] = useState(false);
   const [prepagoModalVisible, setPrepagoModalVisible] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
   React.useEffect(() => {
@@ -90,7 +92,9 @@ export default function LoanCalculatorScreen() {
   /* ── PDF estilo BCP ───────────────────────────────────────────────────────── */
 
   const generatePDF = async () => {
+    if (isGeneratingPDF) return;
     try {
+      setIsGeneratingPDF(true);
       const fn = (v: number) =>
         v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -214,6 +218,8 @@ export default function LoanCalculatorScreen() {
       await Sharing.shareAsync(pdfFile.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -646,17 +652,23 @@ export default function LoanCalculatorScreen() {
                   backgroundColor: '#991b1b',
                   borderWidth: 1,
                   borderColor: '#ef4444',
+                  opacity: isGeneratingPDF ? 0.7 : 1,
                 }}
                 onPress={generatePDF}
+                disabled={isGeneratingPDF}
               >
-                <Ionicons
-                  name="document-text-outline"
-                  size={20}
-                  color="#ffffff"
-                  style={{ marginRight: 8 }}
-                />
+                {isGeneratingPDF ? (
+                  <ActivityIndicator size="small" color="#ffffff" style={{ marginRight: 8 }} />
+                ) : (
+                  <Ionicons
+                    name="document-text-outline"
+                    size={20}
+                    color="#ffffff"
+                    style={{ marginRight: 8 }}
+                  />
+                )}
                 <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 15 }}>
-                  Exportar a PDF
+                  {isGeneratingPDF ? 'Generando PDF...' : 'Exportar a PDF'}
                 </Text>
               </Pressable>
             </View>
