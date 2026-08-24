@@ -14,6 +14,72 @@ function fechaVencimiento(base: Date, mesesAgregar: number): Date {
   return d;
 }
 
+function simulateBalance(
+  cuotaProbable: Decimal,
+  saldoInicial: Decimal,
+  mesesRestantes: number,
+  fechaInicio: Date,
+  TED: Decimal,
+  TSD: Decimal,
+  tipoCalendario: 'real' | 'comercial'
+): Decimal {
+  let saldo = saldoInicial;
+  for (let i = 1; i <= mesesRestantes; i++) {
+    const fechaAnterior = fechaVencimiento(fechaInicio, i - 1);
+    const fechaActual   = fechaVencimiento(fechaInicio, i);
+    const dias = tipoCalendario === 'comercial' ? 30 : differenceInDays(fechaActual, fechaAnterior);
+
+    const interesMes = saldo.times(new Decimal(1).plus(TED).pow(dias).minus(1));
+    const seguroMes  = saldo.times(TSD).times(new Decimal(dias).div(30));
+    
+    let amortMes = cuotaProbable.minus(interesMes).minus(seguroMes);
+    if (amortMes.gte(saldo)) {
+      amortMes = saldo;
+    }
+    saldo = saldo.minus(amortMes);
+    if (saldo.lte(0)) return new Decimal(0);
+  }
+  return saldo;
+}
+
+function findExactCuotaFija(
+  saldoInicial: Decimal,
+  mesesRestantes: number,
+  fechaInicio: Date,
+  TED: Decimal,
+  TSD: Decimal,
+  tipoCalendario: 'real' | 'comercial',
+  cuotaTeorica: Decimal
+): Decimal {
+  if (tipoCalendario === 'comercial') return cuotaTeorica;
+
+  let low = cuotaTeorica.toNumber() * 0.5;
+  let high = cuotaTeorica.toNumber() * 5.0; // Amplio margen para casos de tasas extremas
+  let bestCuota = cuotaTeorica.toNumber();
+
+  // Bisección para encontrar la cuota que hace que el saldo final sea 0
+  for (let iter = 0; iter < 45; iter++) {
+    bestCuota = (low + high) / 2;
+    const finalBalance = simulateBalance(
+      new Decimal(bestCuota),
+      saldoInicial,
+      mesesRestantes,
+      fechaInicio,
+      TED,
+      TSD,
+      tipoCalendario
+    );
+
+    if (finalBalance.gt(0)) {
+      low = bestCuota;
+    } else {
+      high = bestCuota;
+    }
+  }
+
+  return new Decimal(bestCuota);
+}
+
 /**
  * Genera la tabla de amortización con precisión bancaria real (BCP-style).
  *
@@ -91,13 +157,23 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
     J = TEM_Ajustada.plus(Seguro_Ajustado);
   }
 
-  let cuotaTotalFija: Decimal;
+  let cuotaTeorica: Decimal;
   if (J.isZero()) {
-    cuotaTotalFija = numMonto.div(numPlazo);
+    cuotaTeorica = numMonto.div(numPlazo);
   } else {
     const factor = new Decimal(1).plus(J).pow(numPlazo);
-    cuotaTotalFija = numMonto.times(J).times(factor).div(factor.minus(1));
+    cuotaTeorica = numMonto.times(J).times(factor).div(factor.minus(1));
   }
+
+  const cuotaTotalFija = findExactCuotaFija(
+    numMonto, 
+    numPlazo, 
+    fechaDesembolso, 
+    TED, 
+    TSD, 
+    tipoCalendario, 
+    cuotaTeorica
+  );
 
   // ── 5. Cronograma mes a mes con días exactos ──────────────────────────────
   let saldo = numMonto;
@@ -147,8 +223,23 @@ export function generateAmortizationTable(params: LoanParameters): AmortizationR
       if (saldo.gt(0) && params.prepago.tipo === 'reducir_cuota') {
         const periodosRestantes = numPlazo - i;
         if (periodosRestantes > 0) {
-          const factor = new Decimal(1).plus(J).pow(periodosRestantes);
-          cuotaFija = saldo.times(J).times(factor).div(factor.minus(1));
+          let cuotaTeoricaNueva: Decimal;
+          if (J.isZero()) {
+            cuotaTeoricaNueva = saldo.div(periodosRestantes);
+          } else {
+            const factor = new Decimal(1).plus(J).pow(periodosRestantes);
+            cuotaTeoricaNueva = saldo.times(J).times(factor).div(factor.minus(1));
+          }
+          
+          cuotaFija = findExactCuotaFija(
+            saldo,
+            periodosRestantes,
+            fechaActual, // La base del recálculo es el mes actual
+            TED,
+            TSD,
+            tipoCalendario,
+            cuotaTeoricaNueva
+          );
         }
       }
     }
