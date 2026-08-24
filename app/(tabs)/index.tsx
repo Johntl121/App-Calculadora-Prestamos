@@ -14,6 +14,7 @@ import {
   View,
   LayoutAnimation,
   ActivityIndicator,
+  Switch,
 } from 'react-native';
 import { TextInputMask } from 'react-native-masked-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -45,19 +46,26 @@ export default function LoanCalculatorScreen() {
     moneda,
     amortizationTable,
     tcea,
-    bancoSeleccionado,
     updateParameter,
     setMoneda,
     calculateLoan,
     resetStore,
     newSimulation,
-    applyBankPreset,
   } = useLoanStore();
 
   const [isCalculated, setIsCalculated] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [showFormulas, setShowFormulas] = useState(false);
   const [prepagoModalVisible, setPrepagoModalVisible] = useState(false);
+  const [incluirSeguro, setIncluirSeguro] = useState(true);
+
+  const onToggleSeguro = (val: boolean) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setIncluirSeguro(val);
+    if (!val) {
+      updateParameter('seguroDesgravamenRateMensual', '');
+    }
+  };
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
 
   // Ocultar resultados si la tabla está vacía o el store cambió
@@ -408,79 +416,61 @@ export default function LoanCalculatorScreen() {
             })}
           </View>
 
-          {/* Entidad Bancaria */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-3" style={{ marginTop: 8 }}>
-            ENTIDAD BANCARIA (AUTOCOMPLETAR SEGURO)
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="mb-6"
-            contentContainerStyle={{ gap: 8 }}
-          >
-            {['BCP', 'BBVA', 'Interbank', 'Scotiabank'].map((banco) => {
-              const isActive = bancoSeleccionado === banco;
-              return (
-                <Pressable
-                  key={banco}
-                  onPress={() => {
-                    applyBankPreset(banco);
-                    setIsCalculated(false);
+          {/* Seguro de Desgravamen */}
+          <View className={`flex-row items-center justify-between ${incluirSeguro ? 'mb-2' : 'mb-5'}`}>
+            <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest">
+              SEGURO DESGRAVAMEN (% MENSUAL)
+            </Text>
+            <Switch
+              value={incluirSeguro}
+              onValueChange={onToggleSeguro}
+              trackColor={{ false: isDark ? '#334155' : '#cbd5e1', true: '#0f766e' }}
+              thumbColor={'#ffffff'}
+            />
+          </View>
+          
+          {incluirSeguro && (
+            <View className="mb-5">
+              <View className={`flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 ${parseFloat(seguroDesgravamenRateMensual) > 0.5 ? 'mb-3' : ''}`}>
+                <TextInputMask
+                  type="money"
+                  options={{
+                    precision: 2,
+                    separator: '.',
+                    delimiter: '',
+                    unit: '',
+                    suffixUnit: ''
                   }}
                   style={{
-                    paddingVertical: 10,
-                    paddingHorizontal: 20,
-                    borderRadius: 999,
-                    backgroundColor: isActive
-                      ? (isDark ? '#0f766e' : '#0f172a')
-                      : (isDark ? '#1e293b' : '#f1f5f9'),
-                  }}
-                >
-                  <Text style={{
+                    flex: 1,
+                    fontSize: 26,
                     fontWeight: 'bold',
-                    fontSize: 14,
-                    color: isActive ? '#ffffff' : (isDark ? '#94a3b8' : '#64748b')
-                  }}>
-                    {banco}
+                    color: isDark ? '#ffffff' : '#0f172a',
+                    paddingVertical: 16,
+                    paddingHorizontal: 0,
+                  }}
+                  keyboardType="numeric" 
+                  value={seguroDesgravamenRateMensual} 
+                  includeRawValueInChangeText={true}
+                  onChangeText={(_, rawText) => {
+                    updateParameter('seguroDesgravamenRateMensual', rawText || '');
+                  }}
+                  placeholder="0.05" 
+                  placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
+                />
+                <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
+              </View>
+              
+              {parseFloat(seguroDesgravamenRateMensual) > 0.5 && (
+                <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center">
+                  <Ionicons name="warning-outline" size={16} color="#d97706" style={{ marginRight: 8 }} />
+                  <Text className="text-amber-700 dark:text-amber-500 text-xs flex-1 leading-5">
+                    El seguro real suele ser menor a 0.15% mensual. Un valor de {seguroDesgravamenRateMensual}% es inusualmente alto (posible error de tipeo).
                   </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-
-          {/* Seguro de Desgravamen */}
-          <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">
-            SEGURO DESGRAVAMEN (% MENSUAL)
-          </Text>
-          <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
-            <TextInputMask
-              type="money"
-              options={{
-                precision: 2,
-                separator: '.',
-                delimiter: '',
-                unit: '',
-                suffixUnit: ''
-              }}
-              style={{
-                flex: 1,
-                fontSize: 26,
-                fontWeight: 'bold',
-                color: isDark ? '#ffffff' : '#0f172a',
-                paddingVertical: 16,
-                paddingHorizontal: 0,
-              }}
-              keyboardType="numeric" 
-              value={seguroDesgravamenRateMensual} 
-              includeRawValueInChangeText={true}
-              onChangeText={(_, rawText) => {
-                updateParameter('seguroDesgravamenRateMensual', rawText || '');
-              }}
-              placeholder="0.05" 
-              placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
-            />
-            <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
-          </View>
+                </View>
+              )}
+            </View>
+          )}
 
           {/* Plazo */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">PLAZO</Text>
@@ -581,7 +571,7 @@ export default function LoanCalculatorScreen() {
                 {formatCurrency(cuotaMensualEstimada, moneda)}
               </Text>
               <Text className="text-teal-400 text-center text-sm font-medium mb-4">
-                por {plazoMeses} meses · incluye seguro desgravamen
+                por {plazoMeses} meses · {(incluirSeguro && parseFloat(seguroDesgravamenRateMensual || '0') > 0) ? 'incluye seguro desgravamen' : 'sin seguro de desgravamen'}
               </Text>
 
               {tcea > 0 && (
