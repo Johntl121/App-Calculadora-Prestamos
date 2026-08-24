@@ -8,23 +8,14 @@ interface LoanStore extends LoanParameters {
   moneda: string;
   amortizationTable: AmortizationRow[];
   tcea: number;
-  bancoSeleccionado: string | null;
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
   resetStore: () => void;
   newSimulation: () => void;
-  applyBankPreset: (bancoId: string) => void;
 }
 
-const BANK_PRESETS: Record<string, string> = {
-  'BCP': '0.122',
-  'BBVA': '0.085',
-  'Interbank': '0.090',
-  'Scotiabank': '0.105',
-};
-
-const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string | null } = {
+const initialState: LoanParameters & { moneda: string } = {
   monto: '',
   tasaInteres: '',
   tipoTasaFija: 'TEA',
@@ -33,7 +24,6 @@ const initialState: LoanParameters & { moneda: string; bancoSeleccionado: string
   seguroDesgravamenRateMensual: '',
   fechaDesembolso: new Date(),
   moneda: 'S/',
-  bancoSeleccionado: null,
   prepago: undefined,
 };
 
@@ -47,9 +37,6 @@ export const useLoanStore = create<LoanStore>()(
   updateParameter: (key, value) => {
     set((state) => {
       const updates: any = { [key]: value };
-      if (key === 'seguroDesgravamenRateMensual') {
-        updates.bancoSeleccionado = null;
-      }
       return { ...state, ...updates };
     });
   },
@@ -96,13 +83,6 @@ export const useLoanStore = create<LoanStore>()(
       tcea: 0,
     });
   },
-
-  applyBankPreset: (bancoId) => {
-    const rate = BANK_PRESETS[bancoId];
-    if (rate) {
-      set({ bancoSeleccionado: bancoId, seguroDesgravamenRateMensual: rate });
-    }
-  },
 }),
     {
       name: 'loan-store',
@@ -115,7 +95,6 @@ export const useLoanStore = create<LoanStore>()(
         plazoMeses: state.plazoMeses,
         seguroDesgravamenRateMensual: state.seguroDesgravamenRateMensual,
         moneda: state.moneda,
-        bancoSeleccionado: state.bancoSeleccionado,
         prepago: state.prepago,
       }),
     }
