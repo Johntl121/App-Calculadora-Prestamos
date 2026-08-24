@@ -14,37 +14,59 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
 
   const screenWidth = Dimensions.get('window').width;
 
-  const chartData = useMemo(() => {
-    // Filtrar desembolso (mes 0) y mapear a formato StackedBar
-    // Para no saturar el gráfico si hay muchos meses (ej. 60 o 120), podríamos
-    // mostrar 1 de cada N meses o agrupar por años. Pero para préstamos cortos (12-24)
-    // mostrar todos está bien.
+  const extremeInfo = useMemo(() => {
     const filtered = data.filter(r => r.mes > 0);
+    if (filtered.length < 2) return { isExtreme: false, maxVisualCuota: Infinity };
     
-    // Si hay más de 36 meses, mostramos saltos para que quepa bien
+    const baseCuota = filtered[0].cuotaTotal;
+    const maxCuota = Math.max(...filtered.map(r => r.cuotaTotal));
+    
+    // Si la máxima cuota es más de 3 veces la inicial, es un caso de distorsión extrema
+    return {
+      isExtreme: maxCuota > baseCuota * 3,
+      maxVisualCuota: baseCuota * 1.5,
+    };
+  }, [data]);
+
+  const chartData = useMemo(() => {
+    const filtered = data.filter(r => r.mes > 0);
     const step = filtered.length > 36 ? Math.ceil(filtered.length / 30) : 1;
 
     const result = [];
     for (let i = 0; i < filtered.length; i += step) {
       const r = filtered[i];
+      let cap = r.capitalAmortizado;
+      let int = r.interesPagado;
+      let seg = r.seguroDesgravamen;
+      
+      const total = cap + int + seg;
+      if (extremeInfo.isExtreme && total > extremeInfo.maxVisualCuota) {
+        // Escalar proporcionalmente para no romper la visualización
+        const scale = extremeInfo.maxVisualCuota / total;
+        cap *= scale;
+        int *= scale;
+        seg *= scale;
+      }
+
       result.push({
         stacks: [
-          { value: r.capitalAmortizado, color: isDark ? '#0f766e' : '#14b8a6', marginBottom: 2 }, // Teal (Amortización)
-          { value: r.interesPagado, color: isDark ? '#f59e0b' : '#fbbf24', marginBottom: 2 },     // Amber (Interés)
-          { value: r.seguroDesgravamen, color: isDark ? '#64748b' : '#cbd5e1' }                   // Slate (Seguro)
+          { value: cap, color: isDark ? '#0f766e' : '#14b8a6', marginBottom: 2 },
+          { value: int, color: isDark ? '#f59e0b' : '#fbbf24', marginBottom: 2 },
+          { value: seg, color: isDark ? '#64748b' : '#cbd5e1' }
         ],
         label: r.mes.toString(),
       });
     }
     return result;
-  }, [data, isDark]);
+  }, [data, isDark, extremeInfo]);
 
   const maxValue = useMemo(() => {
     if (!data || data.length === 0) return 1000;
+    if (extremeInfo.isExtreme) return Math.ceil(extremeInfo.maxVisualCuota * 1.1);
+    
     const maxCuota = Math.max(...data.map(r => r.cuotaTotal));
-    // Agregamos un 10% de margen superior para que no choque con el techo
     return Math.ceil(maxCuota * 1.1);
-  }, [data]);
+  }, [data, extremeInfo]);
 
   if (!data || data.length <= 1) return null;
 
@@ -68,6 +90,14 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
           <Text className="text-xs text-slate-500 dark:text-slate-400">Seguro</Text>
         </View>
       </View>
+
+      {extremeInfo.isExtreme && (
+        <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 mb-6 items-center">
+          <Text className="text-amber-700 dark:text-amber-500 text-[11px] flex-1 leading-4 text-center">
+            ⚠️ Escala ajustada visualmente debido al crecimiento exponencial del saldo por la alta tasa en un plazo extenso.
+          </Text>
+        </View>
+      )}
 
       <BarChart
         stackData={chartData}
