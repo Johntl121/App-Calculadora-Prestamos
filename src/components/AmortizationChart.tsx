@@ -14,59 +14,74 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
 
   const screenWidth = Dimensions.get('window').width;
 
-  const extremeInfo = useMemo(() => {
-    const filtered = data.filter(r => r.mes > 0);
-    if (filtered.length < 2) return { isExtreme: false, maxVisualCuota: Infinity };
-    
-    const baseCuota = filtered[0].cuotaTotal;
-    const maxCuota = Math.max(...filtered.map(r => r.cuotaTotal));
-    
-    // Si la máxima cuota es más de 3 veces la inicial, es un caso de distorsión extrema
-    return {
-      isExtreme: maxCuota > baseCuota * 3,
-      maxVisualCuota: baseCuota * 1.5,
-    };
-  }, [data]);
-
   const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
     const filtered = data.filter(r => r.mes > 0);
-    const step = filtered.length > 36 ? Math.ceil(filtered.length / 30) : 1;
-
     const result = [];
-    for (let i = 0; i < filtered.length; i += step) {
-      const r = filtered[i];
-      let cap = r.capitalAmortizado;
-      let int = r.interesPagado;
-      let seg = r.seguroDesgravamen;
-      
-      const total = cap + int + seg;
-      if (extremeInfo.isExtreme && total > extremeInfo.maxVisualCuota) {
-        // Escalar proporcionalmente para no romper la visualización
-        const scale = extremeInfo.maxVisualCuota / total;
-        cap *= scale;
-        int *= scale;
-        seg *= scale;
-      }
+    
+    // Si hay menos o igual a 60 meses (5 años), mostrar mes a mes (con scroll natural)
+    if (filtered.length <= 60) {
+      for (let i = 0; i < filtered.length; i++) {
+        const r = filtered[i];
+        let cap = r.capitalAmortizado;
+        let int = r.interesPagado;
+        let seg = r.seguroDesgravamen;
+        
+        // Mostrar etiqueta cada 6 meses (semestral) o en los extremos para evitar superposición visual
+        const showLabel = (r.mes % 6 === 0) || r.mes === 1 || r.mes === filtered.length;
 
-      result.push({
-        stacks: [
-          { value: cap, color: isDark ? '#0f766e' : '#14b8a6', marginBottom: 2 },
-          { value: int, color: isDark ? '#f59e0b' : '#fbbf24', marginBottom: 2 },
-          { value: seg, color: isDark ? '#64748b' : '#cbd5e1' }
-        ],
-        label: r.mes.toString(),
-      });
+        result.push({
+          stacks: [
+            { value: cap, color: isDark ? '#0f766e' : '#14b8a6', marginBottom: 2 },
+            { value: int, color: isDark ? '#f59e0b' : '#fbbf24', marginBottom: 2 },
+            { value: seg, color: isDark ? '#64748b' : '#cbd5e1' }
+          ],
+          label: showLabel ? r.mes.toString() : '',
+        });
+      }
+    } else {
+      // Si hay más de 60 meses, agrupar por años (12 meses por barra)
+      let currentYear = 1;
+      let capSum = 0;
+      let intSum = 0;
+      let segSum = 0;
+      let monthsInYear = 0;
+
+      for (let i = 0; i < filtered.length; i++) {
+        const r = filtered[i];
+        capSum += r.capitalAmortizado;
+        intSum += r.interesPagado;
+        segSum += r.seguroDesgravamen;
+        monthsInYear++;
+
+        // Cortar al llegar al mes 12 o al último elemento
+        if (monthsInYear === 12 || i === filtered.length - 1) {
+          result.push({
+            stacks: [
+              { value: capSum, color: isDark ? '#0f766e' : '#14b8a6', marginBottom: 2 },
+              { value: intSum, color: isDark ? '#f59e0b' : '#fbbf24', marginBottom: 2 },
+              { value: segSum, color: isDark ? '#64748b' : '#cbd5e1' }
+            ],
+            label: currentYear.toString(),
+          });
+
+          currentYear++;
+          capSum = 0;
+          intSum = 0;
+          segSum = 0;
+          monthsInYear = 0;
+        }
+      }
     }
     return result;
-  }, [data, isDark, extremeInfo]);
+  }, [data, isDark]);
 
   const maxValue = useMemo(() => {
-    if (!data || data.length === 0) return 1000;
-    if (extremeInfo.isExtreme) return Math.ceil(extremeInfo.maxVisualCuota * 1.1);
-    
-    const maxCuota = Math.max(...data.map(r => r.cuotaTotal));
-    return Math.ceil(maxCuota * 1.1);
-  }, [data, extremeInfo]);
+    if (!chartData || chartData.length === 0) return 1000;
+    // Calcular el máximo real sobre los stacks ya sumados
+    const maxInChart = Math.max(...chartData.map(c => c.stacks.reduce((acc, s) => acc + s.value, 0)));
+    return Math.ceil(maxInChart * 1.1);
+  }, [chartData]);
 
   if (!data || data.length <= 1) return null;
 
@@ -76,6 +91,12 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
         Composición de Cuota (Amortización vs Interés)
       </Text>
       
+      {data.length > 61 && (
+        <Text className="text-xs text-slate-400 dark:text-slate-500 text-center mb-6 -mt-4 font-medium italic">
+          Datos agrupados anualmente
+        </Text>
+      )}
+
       <View className="flex-row justify-center gap-4 mb-6">
         <View className="flex-row items-center gap-1">
           <View className="w-3 h-3 rounded-full" style={{ backgroundColor: isDark ? '#0f766e' : '#14b8a6' }} />
@@ -91,20 +112,13 @@ export default function AmortizationChart({ data }: AmortizationChartProps) {
         </View>
       </View>
 
-      {extremeInfo.isExtreme && (
-        <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 mb-6 items-center">
-          <Text className="text-amber-700 dark:text-amber-500 text-[11px] flex-1 leading-4 text-center">
-            ⚠️ Escala ajustada visualmente debido al crecimiento exponencial del saldo por la alta tasa en un plazo extenso.
-          </Text>
-        </View>
-      )}
-
       <BarChart
         stackData={chartData}
         width={screenWidth - 80}
         height={220}
-        barWidth={chartData.length > 24 ? 6 : 12}
-        spacing={chartData.length > 24 ? 4 : 8}
+        barWidth={16}
+        spacing={8}
+        scrollAnimation={true}
         initialSpacing={10}
         hideRules
         hideYAxisText
