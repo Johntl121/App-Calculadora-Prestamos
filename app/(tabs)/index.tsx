@@ -23,7 +23,17 @@ import LaTeXView from '../../src/components/LaTeXView';
 import PrepaymentModal from '../../src/components/PrepaymentModal';
 
 const formatCurrency = (value: number, symbol: string) => {
-  return `${symbol} ${(value || 0).toLocaleString('en-US', {
+  const val = value || 0;
+  if (val >= 1_000_000_000_000) {
+    return `${symbol} ${(val / 1_000_000_000_000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} B`;
+  }
+  if (val >= 1_000_000_000) {
+    return `${symbol} ${(val / 1_000_000_000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MMD`;
+  }
+  if (val >= 1_000_000) {
+    return `${symbol} ${(val / 1_000_000).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MM`;
+  }
+  return `${symbol} ${val.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
@@ -364,6 +374,15 @@ export default function LoanCalculatorScreen() {
             />
             <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
           </View>
+          
+          {parseFloat(tasaInteres) > 100 && (
+            <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center mb-4">
+              <Ionicons name="warning-outline" size={16} color="#d97706" style={{ marginRight: 8 }} />
+              <Text className="text-amber-700 dark:text-amber-500 text-xs flex-1 leading-5">
+                Una tasa mayor a 100% es inusualmente alta para un crédito personal o hipotecario (aunque es posible en tarjetas o préstamos informales). Verifica el valor.
+              </Text>
+            </View>
+          )}
 
           {/* Segmented Control: TEA / TEM / TNA */}
           <View
@@ -545,6 +564,15 @@ export default function LoanCalculatorScreen() {
               );
             })}
           </View>
+
+          {tipoCalendario === 'real' && (parseInt(plazoMeses || '0') >= 120) && (
+            <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center mt-4">
+              <Ionicons name="warning-outline" size={16} color="#d97706" style={{ marginRight: 8 }} />
+              <Text className="text-amber-700 dark:text-amber-500 text-xs flex-1 leading-5">
+                Para plazos largos (10+ años), el calendario "Días Reales" puede generar distorsiones acumulativas en la cuota final. Te recomendamos usar "Mes Comercial".
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── BOTÓN CALCULAR ─────────────────────────────────────────────── */}
@@ -567,7 +595,12 @@ export default function LoanCalculatorScreen() {
               <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
                 CUOTA MENSUAL FIJA
               </Text>
-              <Text className="text-[52px] font-black text-white text-center leading-tight mb-1" numberOfLines={1}>
+              <Text 
+                className="text-[52px] font-black text-white text-center leading-tight mb-1" 
+                numberOfLines={1}
+                adjustsFontSizeToFit={true}
+                minimumFontScale={0.4}
+              >
                 {formatCurrency(cuotaMensualEstimada, moneda)}
               </Text>
               <Text className="text-teal-400 text-center text-sm font-medium mb-4">
@@ -585,14 +618,24 @@ export default function LoanCalculatorScreen() {
               <View className="flex-row justify-between mb-8">
                 <View className="flex-1 items-center">
                   <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
-                  <Text className="text-white font-extrabold text-lg" numberOfLines={1}>
+                  <Text 
+                    className="text-white font-extrabold text-lg" 
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.5}
+                  >
                     {formatCurrency(totalPagar, moneda)}
                   </Text>
                 </View>
                 <View className="w-px bg-teal-800" />
                 <View className="flex-1 items-center">
                   <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">INTS. Y SEGURO</Text>
-                  <Text className="text-teal-300 font-extrabold text-lg" numberOfLines={1}>
+                  <Text 
+                    className="text-teal-300 font-extrabold text-lg" 
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.5}
+                  >
                     {formatCurrency(totalInteres + totalSeguro, moneda)}
                   </Text>
                 </View>
