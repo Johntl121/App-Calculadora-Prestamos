@@ -456,7 +456,7 @@ export default function LoanCalculatorScreen() {
           
           {incluirSeguro && (
             <View className="mb-5">
-              <View className={`flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 ${(parseFloat(seguroDesgravamenRateMensual) > 0.5 || !parseFloat(seguroDesgravamenRateMensual)) ? 'mb-3' : ''}`}>
+              <View className={`flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 ${parseFloat(seguroDesgravamenRateMensual) > 0.5 ? 'mb-3' : ''}`}>
                 <TextInputMask
                   type="money"
                   options={{
@@ -485,15 +485,6 @@ export default function LoanCalculatorScreen() {
                 />
                 <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
               </View>
-
-              {(!seguroDesgravamenRateMensual || parseFloat(seguroDesgravamenRateMensual) === 0) && (
-                <View className="flex-row bg-rose-50 dark:bg-rose-950/40 p-3 rounded-lg border border-rose-200 dark:border-rose-900/50 items-center">
-                  <Ionicons name="alert-circle-outline" size={16} color="#e11d48" style={{ marginRight: 8 }} />
-                  <Text className="text-rose-700 dark:text-rose-500 text-xs flex-1 leading-5">
-                    Debes ingresar un valor para el seguro o desactivar el interruptor.
-                  </Text>
-                </View>
-              )}
               
               {parseFloat(seguroDesgravamenRateMensual) > 0.5 && (
                 <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center">
