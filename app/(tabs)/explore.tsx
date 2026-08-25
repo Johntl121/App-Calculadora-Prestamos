@@ -148,7 +148,7 @@ export default function AmortizationTableScreen() {
       {/* Gráfico Visual */}
       {viewMode === 'chart' && amortizationTable.length > 0 && (
         <View style={{ flex: 1, paddingTop: 32 }}>
-          <AmortizationChart data={amortizationTable} />
+          <AmortizationChart data={amortizationTable} moneda={moneda} />
         </View>
       )}
 
