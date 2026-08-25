@@ -16,7 +16,6 @@ import {
   ActivityIndicator,
   Switch,
 } from 'react-native';
-import { TextInputMask } from 'react-native-masked-text';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLoanStore } from '../../src/store/useLoanStore';
 import LaTeXView from '../../src/components/LaTeXView';
@@ -40,6 +39,23 @@ const formatCurrency = (value: number, symbol: string) => {
 };
 
 const CURRENCIES = ['S/', '$', '€'];
+
+const formatWithThousandSeparators = (val: any) => {
+  if (val === undefined || val === null || val === '') return '';
+  const stringVal = String(val);
+  const parts = stringVal.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+};
+
+const cleanNumericText = (text: string) => {
+  let cleanText = text.replace(/[^0-9.]/g, '');
+  const parts = cleanText.split('.');
+  if (parts.length > 2) {
+    cleanText = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleanText;
+};
 
 export default function LoanCalculatorScreen() {
   const insets = useSafeAreaInsets();
@@ -321,15 +337,7 @@ export default function LoanCalculatorScreen() {
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MONTO DEL PRÉSTAMO</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
             <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginRight: 8 }}>{moneda}</Text>
-            <TextInputMask
-              type="money"
-              options={{
-                precision: 2,
-                separator: '.',
-                delimiter: ',',
-                unit: '',
-                suffixUnit: ''
-              }}
+            <TextInput
               style={{
                 flex: 1,
                 fontSize: 26,
@@ -338,11 +346,10 @@ export default function LoanCalculatorScreen() {
                 paddingVertical: 16,
                 paddingHorizontal: 0,
               }}
-              keyboardType="numeric" 
-              value={monto} 
-              includeRawValueInChangeText={true}
-              onChangeText={(_, rawText) => {
-                updateParameter('monto', rawText || '');
+              keyboardType="decimal-pad" 
+              value={formatWithThousandSeparators(monto)} 
+              onChangeText={(text) => {
+                updateParameter('monto', cleanNumericText(text));
               }}
               placeholder="25,000.00" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
@@ -352,15 +359,7 @@ export default function LoanCalculatorScreen() {
           {/* Tasa de Interés */}
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">TASA DE INTERÉS</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-4">
-            <TextInputMask
-              type="money"
-              options={{
-                precision: 2,
-                separator: '.',
-                delimiter: '',
-                unit: '',
-                suffixUnit: ''
-              }}
+            <TextInput
               style={{
                 flex: 1,
                 fontSize: 26,
@@ -369,11 +368,10 @@ export default function LoanCalculatorScreen() {
                 paddingVertical: 16,
                 paddingHorizontal: 0,
               }}
-              keyboardType="numeric" 
-              value={tasaInteres} 
-              includeRawValueInChangeText={true}
-              onChangeText={(_, rawText) => {
-                updateParameter('tasaInteres', rawText || '');
+              keyboardType="decimal-pad" 
+              value={formatWithThousandSeparators(tasaInteres)} 
+              onChangeText={(text) => {
+                updateParameter('tasaInteres', cleanNumericText(text));
               }}
               placeholder="21.50" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
@@ -457,15 +455,7 @@ export default function LoanCalculatorScreen() {
           {incluirSeguro && (
             <View className="mb-5">
               <View className={`flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 ${parseFloat(seguroDesgravamenRateMensual) > 0.5 ? 'mb-3' : ''}`}>
-                <TextInputMask
-                  type="money"
-                  options={{
-                    precision: 2,
-                    separator: '.',
-                    delimiter: '',
-                    unit: '',
-                    suffixUnit: ''
-                  }}
+                <TextInput
                   style={{
                     flex: 1,
                     fontSize: 26,
@@ -474,11 +464,10 @@ export default function LoanCalculatorScreen() {
                     paddingVertical: 16,
                     paddingHorizontal: 0,
                   }}
-                  keyboardType="numeric" 
-                  value={seguroDesgravamenRateMensual} 
-                  includeRawValueInChangeText={true}
-                  onChangeText={(_, rawText) => {
-                    updateParameter('seguroDesgravamenRateMensual', rawText || '');
+                  keyboardType="decimal-pad" 
+                  value={formatWithThousandSeparators(seguroDesgravamenRateMensual)} 
+                  onChangeText={(text) => {
+                    updateParameter('seguroDesgravamenRateMensual', cleanNumericText(text));
                   }}
                   placeholder="0.05" 
                   placeholderTextColor={isDark ? '#475569' : '#94a3b8'}

@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, Text, Pressable, TextInput, KeyboardAvoidingView, Platform, LayoutAnimation } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TextInputMask } from 'react-native-masked-text';
 import { useColorScheme } from 'nativewind';
 import { useLoanStore } from '../store/useLoanStore';
+
+const formatWithThousandSeparators = (val: any) => {
+  if (val === undefined || val === null || val === '') return '';
+  const stringVal = String(val);
+  const parts = stringVal.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return parts.join('.');
+};
+
+const cleanNumericText = (text: string) => {
+  let cleanText = text.replace(/[^0-9.]/g, '');
+  const parts = cleanText.split('.');
+  if (parts.length > 2) {
+    cleanText = parts[0] + '.' + parts.slice(1).join('');
+  }
+  return cleanText;
+};
 
 interface PrepaymentModalProps {
   visible: boolean;
@@ -82,9 +98,7 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
 
           <Text className="text-xs font-bold text-slate-400 dark:text-slate-500 tracking-widest mb-2">MONTO A INYECTAR</Text>
           <View className="flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 mb-5">
-            <TextInputMask
-              type="money"
-              options={{ precision: 2, separator: '.', delimiter: ',', unit: '', suffixUnit: '' }}
+            <TextInput
               style={{
                 flex: 1,
                 fontSize: 22,
@@ -93,10 +107,9 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
                 paddingVertical: 14,
                 paddingHorizontal: 0,
               }}
-              keyboardType="numeric" 
-              value={monto} 
-              includeRawValueInChangeText={true}
-              onChangeText={(_, rawText) => setMonto(rawText || '')}
+              keyboardType="decimal-pad" 
+              value={formatWithThousandSeparators(monto)} 
+              onChangeText={(text) => setMonto(cleanNumericText(text))}
               placeholder="5,000.00" 
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
