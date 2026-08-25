@@ -110,7 +110,7 @@ export default function AmortizationChart({ data, moneda = 'S/' }: AmortizationC
     v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <View className="bg-white dark:bg-slate-900 rounded-3xl pt-5 px-5 pb-3 shadow-sm mx-4 mb-6">
+    <View className="bg-white dark:bg-slate-900 rounded-3xl pt-5 px-5 pb-5 shadow-sm mx-4 mb-6">
       <Text className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-6 text-center">
         Composición de Cuota (Amortización vs Interés)
       </Text>
@@ -160,7 +160,7 @@ export default function AmortizationChart({ data, moneda = 'S/' }: AmortizationC
         maxValue={maxValue}
         showValuesAsTopLabel={false}
         autoShiftLabelsForNegativeStacks={false}
-        labelsExtraHeight={-24}
+        labelsExtraHeight={-5}
         rulesColor={isDark ? '#1e293b' : '#f1f5f9'}
         xAxisLabelsVerticalShift={4}
         labelsDistanceFromXaxis={0}
@@ -182,6 +182,7 @@ export default function AmortizationChart({ data, moneda = 'S/' }: AmortizationC
           else if (index === 1) leftShift = -35;
           else if (index === chartData.length - 1) leftShift = -165;
           else if (index === chartData.length - 2) leftShift = -135;
+          else if (index === chartData.length - 3) leftShift = -105;
 
           const itemTotal = item._cap + item._int + item._seg;
           const spaceAbove = (1 - itemTotal / maxValue) * 250; 
