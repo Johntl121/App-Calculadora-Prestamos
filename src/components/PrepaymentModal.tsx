@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, Text, Pressable, TextInput, KeyboardAvoidingView, Platform, LayoutAnimation } from 'react-native';
+import { Modal, View, Text, Pressable, TextInput, KeyboardAvoidingView, Platform, LayoutAnimation, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useLoanStore } from '../store/useLoanStore';
 import { formatWithThousandSeparators, cleanNumericText } from '../utils/formatters';
+import { generateAmortizationTable } from '../utils/loanMath';
 
 interface PrepaymentModalProps {
   visible: boolean;
@@ -14,7 +15,19 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
 
-  const { updateParameter, calculateLoan, plazoMeses, prepago } = useLoanStore();
+  const { 
+    updateParameter, 
+    calculateLoan, 
+    plazoMeses, 
+    prepago,
+    monto: storeMonto,
+    tasaInteres,
+    tipoTasaFija,
+    tipoCalendario,
+    seguroDesgravamenRateMensual,
+    fechaDesembolso,
+    moneda 
+  } = useLoanStore();
 
   const [mes, setMes] = useState('6');
   const [monto, setMonto] = useState('');
@@ -34,11 +47,55 @@ export default function PrepaymentModal({ visible, onClose }: PrepaymentModalPro
     const numMes = parseInt(mes);
     const numMonto = parseFloat(monto);
     
-    if (numMes > 0 && numMes < maxMeses && numMonto > 0) {
-      updateParameter('prepago', { mes: numMes, monto: numMonto, tipo });
-      calculateLoan();
-      onClose();
+    if (isNaN(numMes) || numMes <= 0 || numMes >= maxMeses) {
+      Alert.alert('Mes inválido', `El mes del prepago debe estar entre 1 y ${maxMeses - 1}.`);
+      return;
     }
+
+    if (isNaN(numMonto) || numMonto <= 0) {
+      Alert.alert('Monto inválido', 'Por favor ingresa un monto válido mayor a 0.');
+      return;
+    }
+
+    // 1. Obtener la tabla original sin el prepago actual
+    const originalTable = generateAmortizationTable({
+      monto: storeMonto,
+      tasaInteres,
+      tipoTasaFija,
+      tipoCalendario,
+      plazoMeses,
+      seguroDesgravamenRateMensual,
+      fechaDesembolso,
+      prepago: undefined,
+    });
+
+    const row = originalTable.find(r => r.mes === numMes);
+    // FIX PUNTO 1: Redondeamos a 2 decimales para evitar problemas de precisión flotante
+    const saldoPendiente = row ? Math.round(row.saldoRemanente * 100) / 100 : 0;
+
+    // 2. Validar si el monto ingresado excede o liquida el saldo
+    if (numMonto >= saldoPendiente) {
+      Alert.alert(
+        'Liquidación Total',
+        `Este monto cubre el saldo pendiente completo (${moneda} ${saldoPendiente.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}) en el mes ${numMes}.\n\nEl préstamo quedará totalmente liquidado en ese mes, sin cuotas restantes, sin importar la opción que hayas seleccionado.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { 
+            text: 'Liquidar Préstamo', 
+            onPress: () => {
+              updateParameter('prepago', { mes: numMes, monto: saldoPendiente, tipo: 'reducir_plazo' });
+              calculateLoan();
+              onClose();
+            }
+          }
+        ]
+      );
+      return;
+    }
+
+    updateParameter('prepago', { mes: numMes, monto: numMonto, tipo });
+    calculateLoan();
+    onClose();
   };
 
   const handleClear = () => {

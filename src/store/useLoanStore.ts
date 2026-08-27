@@ -37,6 +37,10 @@ export const useLoanStore = create<LoanStore>()(
   updateParameter: (key, value) => {
     set((state) => {
       const updates: any = { [key]: value };
+      // FIX PUNTO 3: Limpiar el prepago activo si cambian los parámetros base
+      if (key !== 'prepago') {
+        updates.prepago = undefined;
+      }
       return { ...state, ...updates };
     });
   },
