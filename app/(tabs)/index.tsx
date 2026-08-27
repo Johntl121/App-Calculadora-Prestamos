@@ -1,25 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Paths, File } from 'expo-file-system';
+import { File, Paths } from 'expo-file-system';
 import * as Print from 'expo-print';
 import { Link } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useColorScheme } from 'nativewind';
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
+  LayoutAnimation,
   Modal,
   Pressable,
   ScrollView,
+  Switch,
   Text,
   TextInput,
   View,
-  LayoutAnimation,
-  ActivityIndicator,
-  Switch,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLoanStore } from '../../src/store/useLoanStore';
 import LaTeXView from '../../src/components/LaTeXView';
 import PrepaymentModal from '../../src/components/PrepaymentModal';
+import { useLoanStore } from '../../src/store/useLoanStore';
 
 const formatCurrency = (value: number, symbol: string) => {
   const val = value || 0;
@@ -40,7 +40,7 @@ const formatCurrency = (value: number, symbol: string) => {
 
 const CURRENCIES = ['S/', '$', '€'];
 
-import { formatWithThousandSeparators, cleanNumericText } from '../../src/utils/formatters';
+import { cleanNumericText, formatWithThousandSeparators } from '../../src/utils/formatters';
 
 export default function LoanCalculatorScreen() {
   const insets = useSafeAreaInsets();
@@ -57,6 +57,7 @@ export default function LoanCalculatorScreen() {
     moneda,
     amortizationTable,
     tcea,
+    prepago,
     updateParameter,
     setMoneda,
     calculateLoan,
@@ -233,7 +234,7 @@ export default function LoanCalculatorScreen() {
       const tempFile = new File(uri);
       const pdfFile = new File(Paths.cache, `Reporte_Simulacion_${numMonto}_${safeMoneda}.pdf`);
       tempFile.move(pdfFile);
-      
+
       await Sharing.shareAsync(pdfFile.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -244,11 +245,20 @@ export default function LoanCalculatorScreen() {
 
   /* ── Totales (useMemo) ────────────────────────────────────────────────────── */
 
-  const { cuotaMensualEstimada, totalPagar, totalInteres, totalSeguro } = useMemo(() => {
+  const { cuotaMensualEstimada, totalPagar, totalInteres, totalSeguro, plazoReal } = useMemo(() => {
     if (amortizationTable.length === 0)
-      return { cuotaMensualEstimada: 0, totalPagar: 0, totalInteres: 0, totalSeguro: 0 };
+      return { cuotaMensualEstimada: 0, totalPagar: 0, totalInteres: 0, totalSeguro: 0, plazoReal: 0 };
 
-    const primeraCuota = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
+    let primeraCuota = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
+
+    // Si hay prepago para reducir cuota, mostrar la cuota vigente (la post-prepago)
+    if (prepago && prepago.tipo === 'reducir_cuota') {
+      const cuotaPostPrepago = amortizationTable.find((r) => r.mes === prepago.mes + 1);
+      if (cuotaPostPrepago) {
+        primeraCuota = cuotaPostPrepago.cuotaTotal;
+      }
+    }
+
     let tPagar = 0, tInteres = 0, tSeguro = 0;
     for (const row of amortizationTable) {
       if (row.mes === 0) continue;
@@ -256,14 +266,18 @@ export default function LoanCalculatorScreen() {
       tInteres += row.interesPagado;
       tSeguro += row.seguroDesgravamen;
     }
-    return { cuotaMensualEstimada: primeraCuota, totalPagar: tPagar, totalInteres: tInteres, totalSeguro: tSeguro };
-  }, [amortizationTable]);
+
+    // El plazo real es el mes de la última fila, no el string original
+    const plazoRealCalc = amortizationTable[amortizationTable.length - 1]?.mes || 0;
+
+    return { cuotaMensualEstimada: primeraCuota, totalPagar: tPagar, totalInteres: tInteres, totalSeguro: tSeguro, plazoReal: plazoRealCalc };
+  }, [amortizationTable, prepago]);
 
   const isDark = colorScheme === 'dark';
 
-  const isCalculateDisabled = 
-    !monto || parseFloat(monto) === 0 || 
-    !tasaInteres || parseFloat(tasaInteres) === 0 || 
+  const isCalculateDisabled =
+    !monto || parseFloat(monto) === 0 ||
+    !tasaInteres || parseFloat(tasaInteres) === 0 ||
     !plazoMeses || parseInt(plazoMeses) === 0 ||
     (incluirSeguro && (!seguroDesgravamenRateMensual || parseFloat(seguroDesgravamenRateMensual) === 0));
 
@@ -331,12 +345,12 @@ export default function LoanCalculatorScreen() {
                 paddingVertical: 16,
                 paddingHorizontal: 0,
               }}
-              keyboardType="decimal-pad" 
-              value={formatWithThousandSeparators(monto)} 
+              keyboardType="decimal-pad"
+              value={formatWithThousandSeparators(monto)}
               onChangeText={(text) => {
                 updateParameter('monto', cleanNumericText(text));
               }}
-              placeholder="25,000.00" 
+              placeholder="25,000.00"
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
           </View>
@@ -353,17 +367,17 @@ export default function LoanCalculatorScreen() {
                 paddingVertical: 16,
                 paddingHorizontal: 0,
               }}
-              keyboardType="decimal-pad" 
-              value={formatWithThousandSeparators(tasaInteres)} 
+              keyboardType="decimal-pad"
+              value={formatWithThousandSeparators(tasaInteres)}
               onChangeText={(text) => {
                 updateParameter('tasaInteres', cleanNumericText(text));
               }}
-              placeholder="21.50" 
+              placeholder="21.50"
               placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
             />
             <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
           </View>
-          
+
           {parseFloat(tasaInteres) > 100 && (
             <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center mb-4">
               <Ionicons name="warning-outline" size={16} color="#d97706" style={{ marginRight: 8 }} />
@@ -436,7 +450,7 @@ export default function LoanCalculatorScreen() {
               thumbColor={'#ffffff'}
             />
           </View>
-          
+
           {incluirSeguro && (
             <View className="mb-5">
               <View className={`flex-row items-center border border-slate-200 dark:border-slate-700 rounded-xl px-4 ${parseFloat(seguroDesgravamenRateMensual) > 0.5 ? 'mb-3' : ''}`}>
@@ -449,17 +463,17 @@ export default function LoanCalculatorScreen() {
                     paddingVertical: 16,
                     paddingHorizontal: 0,
                   }}
-                  keyboardType="decimal-pad" 
-                  value={formatWithThousandSeparators(seguroDesgravamenRateMensual)} 
+                  keyboardType="decimal-pad"
+                  value={formatWithThousandSeparators(seguroDesgravamenRateMensual)}
                   onChangeText={(text) => {
                     updateParameter('seguroDesgravamenRateMensual', cleanNumericText(text));
                   }}
-                  placeholder="0.05" 
+                  placeholder="0.05"
                   placeholderTextColor={isDark ? '#475569' : '#94a3b8'}
                 />
                 <Text style={{ fontSize: 26, fontWeight: 'bold', color: isDark ? '#94a3b8' : '#64748b', marginLeft: 8 }}>%</Text>
               </View>
-              
+
               {parseFloat(seguroDesgravamenRateMensual) > 0.5 && (
                 <View className="flex-row bg-amber-50 dark:bg-amber-950/40 p-3 rounded-lg border border-amber-200 dark:border-amber-900/50 items-center">
                   <Ionicons name="warning-outline" size={16} color="#d97706" style={{ marginRight: 8 }} />
@@ -576,8 +590,8 @@ export default function LoanCalculatorScreen() {
               <Text className="text-xs font-bold text-teal-300 tracking-widest mb-1 text-center">
                 CUOTA MENSUAL FIJA
               </Text>
-              <Text 
-                className="text-[52px] font-black text-white text-center leading-tight mb-1" 
+              <Text
+                className="text-[52px] font-black text-white text-center leading-tight mb-1"
                 numberOfLines={1}
                 adjustsFontSizeToFit={true}
                 minimumFontScale={0.4}
@@ -585,7 +599,7 @@ export default function LoanCalculatorScreen() {
                 {formatCurrency(cuotaMensualEstimada, moneda)}
               </Text>
               <Text className="text-teal-400 text-center text-sm font-medium mb-4">
-                por {plazoMeses} meses · {(incluirSeguro && parseFloat(seguroDesgravamenRateMensual || '0') > 0) ? 'incluye seguro desgravamen' : 'sin seguro de desgravamen'}
+                por {plazoReal} meses · {(incluirSeguro && parseFloat(seguroDesgravamenRateMensual || '0') > 0) ? 'incluye seguro desgravamen' : 'sin seguro de desgravamen'}
               </Text>
 
               {tcea > 0 && (
@@ -599,8 +613,8 @@ export default function LoanCalculatorScreen() {
               <View className="flex-row justify-between mb-8">
                 <View className="flex-1 items-center">
                   <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">TOTAL PAGO</Text>
-                  <Text 
-                    className="text-white font-extrabold text-lg" 
+                  <Text
+                    className="text-white font-extrabold text-lg"
                     numberOfLines={1}
                     adjustsFontSizeToFit={true}
                     minimumFontScale={0.5}
@@ -611,8 +625,8 @@ export default function LoanCalculatorScreen() {
                 <View className="w-px bg-teal-800" />
                 <View className="flex-1 items-center">
                   <Text className="text-xs text-teal-400 font-bold tracking-widest mb-1">INTS. Y SEGURO</Text>
-                  <Text 
-                    className="text-teal-300 font-extrabold text-lg" 
+                  <Text
+                    className="text-teal-300 font-extrabold text-lg"
                     numberOfLines={1}
                     adjustsFontSizeToFit={true}
                     minimumFontScale={0.5}
@@ -735,9 +749,9 @@ export default function LoanCalculatorScreen() {
       </Pressable>
 
       {/* ── MODAL DE PREPAGO ──────────────────────────────────────────────── */}
-      <PrepaymentModal 
-        visible={prepagoModalVisible} 
-        onClose={() => setPrepagoModalVisible(false)} 
+      <PrepaymentModal
+        visible={prepagoModalVisible}
+        onClose={() => setPrepagoModalVisible(false)}
       />
 
       {/* ── MODAL GUIA DEL SIMULADOR ───────────────────────────────────────── */}
@@ -754,7 +768,7 @@ export default function LoanCalculatorScreen() {
             style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(0,0,0,0.55)' }}
             onPress={() => setInfoVisible(false)}
           />
-          
+
           <View style={{ flex: 1, justifyContent: 'flex-end' }} pointerEvents="box-none">
             {/* Tarjeta Modal — Un View simple para no interceptar los gestos del ScrollView */}
             <View
@@ -766,292 +780,292 @@ export default function LoanCalculatorScreen() {
                 paddingBottom: insets.bottom + 16,
               }}
             >
-            {/* Cabecera del modal */}
-            <View style={{
-              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-              paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16,
-              borderBottomWidth: 1, borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
-            }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Ionicons name="book-outline" size={22} color="#0f766e" />
-                <Text style={{ fontSize: 18, fontWeight: '900', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                  Guía del Simulador
-                </Text>
+              {/* Cabecera del modal */}
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                paddingHorizontal: 24, paddingTop: 20, paddingBottom: 16,
+                borderBottomWidth: 1, borderBottomColor: isDark ? '#1e293b' : '#f1f5f9',
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Ionicons name="book-outline" size={22} color="#0f766e" />
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                    Guía del Simulador
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => setInfoVisible(false)}
+                  style={{
+                    width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                  }}
+                >
+                  <Ionicons name="close" size={18} color={isDark ? '#94a3b8' : '#64748b'} />
+                </Pressable>
               </View>
-              <Pressable
-                onPress={() => setInfoVisible(false)}
-                style={{
-                  width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-                }}
+
+              {/* Contenido con scroll */}
+              <ScrollView
+                style={{ paddingHorizontal: 24 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingTop: 20, paddingBottom: 8 }}
               >
-                <Ionicons name="close" size={18} color={isDark ? '#94a3b8' : '#64748b'} />
-              </Pressable>
-            </View>
-
-            {/* Contenido con scroll */}
-            <ScrollView
-              style={{ paddingHorizontal: 24 }}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingTop: 20, paddingBottom: 8 }}
-            >
-              {/* ── Sistema Francés ─────────────────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                borderRadius: 16, padding: 18, marginBottom: 14,
-                borderLeftWidth: 3, borderLeftColor: '#0f766e',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                  <Ionicons name="stats-chart-outline" size={18} color="#0f766e" />
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                    Sistema Francés (Cuotas Fijas)
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  Esta app utiliza el método de cuotas fijas. Al inicio pagas más intereses y menos capital, pero tu cuota mensual se mantiene igual durante todo el plazo.
-                </Text>
-              </View>
-
-              {/* ── Pago Adelantado ─────────────────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                borderRadius: 16, padding: 18, marginBottom: 14,
-                borderLeftWidth: 3, borderLeftColor: '#10b981',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                  <Ionicons name="cash-outline" size={18} color="#10b981" />
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                    Pago Adelantado (Prepago)
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  Un prepago es un abono extra directo al capital. Tienes dos opciones: <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Terminar Antes"</Text> (reduces el plazo total manteniendo tu cuota) o <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Pagar Menos al Mes"</Text> (reduces tu cuota mensual manteniendo tu plazo). Ejemplo: Si abonas S/ 5,000 extra en el mes 6, la app recalcula todo al instante para que veas cuánto ahorras en intereses.
-                </Text>
-              </View>
-
-              {/* ── TEA vs TCEA ─────────────────────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                borderRadius: 16, padding: 18, marginBottom: 14,
-                borderLeftWidth: 3, borderLeftColor: '#6366f1',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                  <Ionicons name="trending-up-outline" size={18} color="#6366f1" />
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                    TEA vs. TCEA
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TEA</Text> es el costo puro de tu préstamo por intereses. La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TCEA</Text> refleja el costo total, incluyendo el seguro de desgravamen. Es un valor <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>ESTIMADO</Text> (referencial) ya que puede variar levemente frente a tu banco por reglas de redondeo exactas.
-                </Text>
-              </View>
-
-              {/* ── Seguro de Desgravamen ────────────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                borderRadius: 16, padding: 18, marginBottom: 14,
-                borderLeftWidth: 3, borderLeftColor: '#f59e0b',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                  <Ionicons name="shield-checkmark-outline" size={18} color="#f59e0b" />
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                    Seguro de Desgravamen
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  Es obligatorio en muchos préstamos. Lo calculamos de forma proporcional a los días reales del período sobre tu saldo pendiente, tal como lo hacen BCP, BBVA e Interbank.
-                </Text>
-              </View>
-
-              {/* ── Calendario y Última Cuota ───────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                borderRadius: 16, padding: 18, marginBottom: 14,
-                borderLeftWidth: 3, borderLeftColor: '#ec4899',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
-                  <Ionicons name="calendar-outline" size={18} color="#ec4899" />
-                  <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                    Calendario y Última Cuota
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
-                  El modo <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Mes Comercial"</Text> asume 30 días fijos. El <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Calendario Real"</Text> usa los días exactos entre pagos (28, 30, 31). En el calendario real, el interés fluctúa mes a mes, lo que causa que la <Text style={{ fontStyle: 'italic' }}>última cuota varíe ligeramente</Text> para ajustar tu saldo final exactamente a S/ 0.00.
-                </Text>
-              </View>
-
-              {/* ── Aviso Legal ──────────────────────────────── */}
-              <View style={{
-                backgroundColor: isDark ? '#0f172a' : '#fafafa',
-                borderRadius: 16, padding: 16, marginBottom: 8,
-                borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
-              }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 }}>
-                  <Ionicons name="alert-circle-outline" size={16} color={isDark ? '#64748b' : '#94a3b8'} />
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#64748b' : '#94a3b8' }}>
-                    Aviso Legal
-                  </Text>
-                </View>
-                <Text style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8', lineHeight: 18 }}>
-                  Los resultados y la TCEA mostrada son simulaciones referenciales. Los montos finales pueden variar ligeramente por reglas de redondeo normativo de la SBS, cobros de portes o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
-                </Text>
-              </View>
-
-              {/* ── Botón toggle Fórmulas ───────────────────────────── */}
-              <Pressable
-                onPress={() => setShowFormulas(!showFormulas)}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  paddingVertical: 14, marginTop: 8, marginBottom: 4, gap: 8,
-                  borderRadius: 14,
-                  backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
-                  borderWidth: 1,
-                  borderColor: isDark ? '#334155' : '#e2e8f0',
-                }}
-              >
-                <Ionicons
-                  name={showFormulas ? 'chevron-up-outline' : 'calculator-outline'}
-                  size={16}
-                  color="#0f766e"
-                />
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f766e' }}>
-                  {showFormulas ? 'Ocultar Fórmulas' : 'Ver Fórmulas y Casos de Uso Reales'}
-                </Text>
-              </Pressable>
-
-              {/* ── Contenido expandible ──────────────────────────── */}
-              {showFormulas && (
-                <View style={{ marginTop: 12, gap: 12 }}>
-
-                  {/* Casos de Uso */}
-                  <View style={{
-                    backgroundColor: isDark ? '#1e293b' : '#f8fafc',
-                    borderRadius: 14, padding: 16,
-                    borderLeftWidth: 3, borderLeftColor: '#6366f1',
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <Ionicons name="briefcase-outline" size={16} color="#6366f1" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#c7d2fe' : '#4338ca' }}>
-                        Cuándo usar cada tasa
-                      </Text>
-                    </View>
-                    <View style={{ gap: 8 }}>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <Text style={{
-                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
-                          color: '#0f766e', backgroundColor: isDark ? '#0f172a' : '#f0fdf4',
-                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
-                        }}>TEA</Text>
-                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
-                          Estándar bancario. Hipotecas, créditos vehiculares y personales. Considera la capitalización del dinero.
-                        </Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <Text style={{
-                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
-                          color: '#f59e0b', backgroundColor: isDark ? '#0f172a' : '#fffbeb',
-                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
-                        }}>TEM</Text>
-                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
-                          Tasa ya mensualizada. Útil cuando el banco te informa directamente la tasa del mes.
-                        </Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <Text style={{
-                          fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
-                          color: '#ec4899', backgroundColor: isDark ? '#0f172a' : '#fdf2f8',
-                          paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
-                        }}>TNA</Text>
-                        <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
-                          Tasa sin capitalización de intereses. Común en tarjetas de crédito y algunos créditos de consumo de corto plazo. Si tu banco te la da, pídeles también la TEA equivalente para comparar bien.
-                        </Text>
-                      </View>
-                    </View>
+                {/* ── Sistema Francés ─────────────────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                  borderRadius: 16, padding: 18, marginBottom: 14,
+                  borderLeftWidth: 3, borderLeftColor: '#0f766e',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="stats-chart-outline" size={18} color="#0f766e" />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                      Sistema Francés (Cuotas Fijas)
+                    </Text>
                   </View>
+                  <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                    Esta app utiliza el método de cuotas fijas. Al inicio pagas más intereses y menos capital, pero tu cuota mensual se mantiene igual durante todo el plazo.
+                  </Text>
+                </View>
 
-                  {/* Conversión a TEM */}
-                  <View style={{
-                    backgroundColor: isDark ? '#0f172a' : '#f8fafc',
-                    borderRadius: 14, padding: 16,
-                    borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <Ionicons name="swap-horizontal-outline" size={16} color="#0f766e" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
-                        Conversión a Tasa Mensual
-                      </Text>
-                    </View>
-                    <View style={{ gap: 8 }}>
-                      <View style={{
-                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                        borderRadius: 10, padding: 12,
-                      }}>
-                        <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TEA:</Text>
-                        <LaTeXView
-                          formula={String.raw`TEM = (1 + TEA)^{\frac{1}{12}} - 1`}
-                          color={isDark ? '#0f766e' : undefined}
-                          backgroundColor={isDark ? '#1e293b' : '#ffffff'}
-                          fontSize={14}
-                        />
-                      </View>
-                      <View style={{
-                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                        borderRadius: 10, padding: 12,
-                      }}>
-                        <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TNA:</Text>
-                        <LaTeXView
-                          formula={String.raw`TEM = \frac{TNA}{12}`}
-                          color={isDark ? '#f59e0b' : '#b45309'}
-                          backgroundColor={isDark ? '#1e293b' : '#ffffff'}
-                          fontSize={14}
-                        />
-                      </View>
-                    </View>
+                {/* ── Pago Adelantado ─────────────────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                  borderRadius: 16, padding: 18, marginBottom: 14,
+                  borderLeftWidth: 3, borderLeftColor: '#10b981',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="cash-outline" size={18} color="#10b981" />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                      Pago Adelantado (Prepago)
+                    </Text>
                   </View>
+                  <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                    Un prepago es un abono extra directo al capital. Tienes dos opciones: <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Terminar Antes"</Text> (reduces el plazo total manteniendo tu cuota) o <Text style={{ fontWeight: 'bold', color: isDark ? '#e2e8f0' : '#334155' }}>"Pagar Menos al Mes"</Text> (reduces tu cuota mensual manteniendo tu plazo). Ejemplo: Si abonas S/ 5,000 extra en el mes 6, la app recalcula todo al instante para que veas cuánto ahorras en intereses.
+                  </Text>
+                </View>
 
-                  {/* Fórmula de Cuota Fija */}
-                  <View style={{
-                    backgroundColor: isDark ? '#0c1a2e' : '#eff6ff',
-                    borderRadius: 14, padding: 16,
-                    borderLeftWidth: 3, borderLeftColor: '#3b82f6',
-                  }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <Ionicons name="calculator-outline" size={16} color="#3b82f6" />
-                      <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#bfdbfe' : '#1d4ed8' }}>
-                        Sistema Francés — Fórmula de Cuota
-                      </Text>
-                    </View>
+                {/* ── TEA vs TCEA ─────────────────────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                  borderRadius: 16, padding: 18, marginBottom: 14,
+                  borderLeftWidth: 3, borderLeftColor: '#6366f1',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="trending-up-outline" size={18} color="#6366f1" />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                      TEA vs. TCEA
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                    La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TEA</Text> es el costo puro de tu préstamo por intereses. La <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>TCEA</Text> refleja el costo total, incluyendo el seguro de desgravamen. Es un valor <Text style={{ fontWeight: 'bold', color: isDark ? '#c7d2fe' : '#4338ca' }}>ESTIMADO</Text> (referencial) ya que puede variar levemente frente a tu banco por reglas de redondeo exactas.
+                  </Text>
+                </View>
+
+                {/* ── Seguro de Desgravamen ────────────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                  borderRadius: 16, padding: 18, marginBottom: 14,
+                  borderLeftWidth: 3, borderLeftColor: '#f59e0b',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="shield-checkmark-outline" size={18} color="#f59e0b" />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                      Seguro de Desgravamen
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                    Es obligatorio en muchos préstamos. Lo calculamos de forma proporcional a los días reales del período sobre tu saldo pendiente, tal como lo hacen BCP, BBVA e Interbank.
+                  </Text>
+                </View>
+
+                {/* ── Calendario y Última Cuota ───────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                  borderRadius: 16, padding: 18, marginBottom: 14,
+                  borderLeftWidth: 3, borderLeftColor: '#ec4899',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 }}>
+                    <Ionicons name="calendar-outline" size={18} color="#ec4899" />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                      Calendario y Última Cuota
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 14, color: isDark ? '#94a3b8' : '#475569', lineHeight: 22 }}>
+                    El modo <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Mes Comercial"</Text> asume 30 días fijos. El <Text style={{ fontWeight: 'bold', color: isDark ? '#fbcfe8' : '#be185d' }}>"Calendario Real"</Text> usa los días exactos entre pagos (28, 30, 31). En el calendario real, el interés fluctúa mes a mes, lo que causa que la <Text style={{ fontStyle: 'italic' }}>última cuota varíe ligeramente</Text> para ajustar tu saldo final exactamente a S/ 0.00.
+                  </Text>
+                </View>
+
+                {/* ── Aviso Legal ──────────────────────────────── */}
+                <View style={{
+                  backgroundColor: isDark ? '#0f172a' : '#fafafa',
+                  borderRadius: 16, padding: 16, marginBottom: 8,
+                  borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 8 }}>
+                    <Ionicons name="alert-circle-outline" size={16} color={isDark ? '#64748b' : '#94a3b8'} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: isDark ? '#64748b' : '#94a3b8' }}>
+                      Aviso Legal
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: isDark ? '#475569' : '#94a3b8', lineHeight: 18 }}>
+                    Los resultados y la TCEA mostrada son simulaciones referenciales. Los montos finales pueden variar ligeramente por reglas de redondeo normativo de la SBS, cobros de portes o políticas específicas de cada entidad financiera. Esta app no constituye asesoría financiera.
+                  </Text>
+                </View>
+
+                {/* ── Botón toggle Fórmulas ───────────────────────────── */}
+                <Pressable
+                  onPress={() => setShowFormulas(!showFormulas)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+                    paddingVertical: 14, marginTop: 8, marginBottom: 4, gap: 8,
+                    borderRadius: 14,
+                    backgroundColor: isDark ? '#1e293b' : '#f1f5f9',
+                    borderWidth: 1,
+                    borderColor: isDark ? '#334155' : '#e2e8f0',
+                  }}
+                >
+                  <Ionicons
+                    name={showFormulas ? 'chevron-up-outline' : 'calculator-outline'}
+                    size={16}
+                    color="#0f766e"
+                  />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0f766e' }}>
+                    {showFormulas ? 'Ocultar Fórmulas' : 'Ver Fórmulas y Casos de Uso Reales'}
+                  </Text>
+                </Pressable>
+
+                {/* ── Contenido expandible ──────────────────────────── */}
+                {showFormulas && (
+                  <View style={{ marginTop: 12, gap: 12 }}>
+
+                    {/* Casos de Uso */}
                     <View style={{
-                      backgroundColor: isDark ? '#1e293b' : '#ffffff',
-                      borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 10,
+                      backgroundColor: isDark ? '#1e293b' : '#f8fafc',
+                      borderRadius: 14, padding: 16,
+                      borderLeftWidth: 3, borderLeftColor: '#6366f1',
                     }}>
-                      <LaTeXView
-                        formula={String.raw`Cuota = P \times \frac{i(1+i)^n}{(1+i)^n - 1}`}
-                        color={isDark ? '#93c5fd' : '#2563eb'}
-                        backgroundColor={isDark ? '#1e293b' : '#ffffff'}
-                        fontSize={15}
-                      />
-                    </View>
-                    <View style={{ gap: 5 }}>
-                      {[
-                        ['P', 'Monto del préstamo'],
-                        ['i', 'TEM + Tasa de Desgravamen'],
-                        ['n', 'Plazo en meses'],
-                      ].map(([sym, desc]) => (
-                        <View key={sym} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <Ionicons name="briefcase-outline" size={16} color="#6366f1" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#c7d2fe' : '#4338ca' }}>
+                          Cuándo usar cada tasa
+                        </Text>
+                      </View>
+                      <View style={{ gap: 8 }}>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
                           <Text style={{
-                            fontFamily: 'monospace', fontWeight: '800', fontSize: 13,
-                            color: '#3b82f6', width: 18, textAlign: 'center',
-                          }}>{sym}</Text>
-                          <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569' }}>=  {desc}</Text>
+                            fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                            color: '#0f766e', backgroundColor: isDark ? '#0f172a' : '#f0fdf4',
+                            paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                          }}>TEA</Text>
+                          <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                            Estándar bancario. Hipotecas, créditos vehiculares y personales. Considera la capitalización del dinero.
+                          </Text>
                         </View>
-                      ))}
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Text style={{
+                            fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                            color: '#f59e0b', backgroundColor: isDark ? '#0f172a' : '#fffbeb',
+                            paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                          }}>TEM</Text>
+                          <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                            Tasa ya mensualizada. Útil cuando el banco te informa directamente la tasa del mes.
+                          </Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <Text style={{
+                            fontFamily: 'monospace', fontWeight: '700', fontSize: 12,
+                            color: '#ec4899', backgroundColor: isDark ? '#0f172a' : '#fdf2f8',
+                            paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6,
+                          }}>TNA</Text>
+                          <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569', flex: 1, lineHeight: 18 }}>
+                            Tasa sin capitalización de intereses. Común en tarjetas de crédito y algunos créditos de consumo de corto plazo. Si tu banco te la da, pídeles también la TEA equivalente para comparar bien.
+                          </Text>
+                        </View>
+                      </View>
                     </View>
-                  </View>
 
-                </View>
-              )}
-            </ScrollView>
+                    {/* Conversión a TEM */}
+                    <View style={{
+                      backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                      borderRadius: 14, padding: 16,
+                      borderWidth: 1, borderColor: isDark ? '#334155' : '#e2e8f0',
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <Ionicons name="swap-horizontal-outline" size={16} color="#0f766e" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#f1f5f9' : '#0f172a' }}>
+                          Conversión a Tasa Mensual
+                        </Text>
+                      </View>
+                      <View style={{ gap: 8 }}>
+                        <View style={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          borderRadius: 10, padding: 12,
+                        }}>
+                          <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TEA:</Text>
+                          <LaTeXView
+                            formula={String.raw`TEM = (1 + TEA)^{\frac{1}{12}} - 1`}
+                            color={isDark ? '#0f766e' : undefined}
+                            backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                            fontSize={14}
+                          />
+                        </View>
+                        <View style={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          borderRadius: 10, padding: 12,
+                        }}>
+                          <Text style={{ fontSize: 11, color: isDark ? '#64748b' : '#94a3b8', marginBottom: 4 }}>Desde TNA:</Text>
+                          <LaTeXView
+                            formula={String.raw`TEM = \frac{TNA}{12}`}
+                            color={isDark ? '#f59e0b' : '#b45309'}
+                            backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                            fontSize={14}
+                          />
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Fórmula de Cuota Fija */}
+                    <View style={{
+                      backgroundColor: isDark ? '#0c1a2e' : '#eff6ff',
+                      borderRadius: 14, padding: 16,
+                      borderLeftWidth: 3, borderLeftColor: '#3b82f6',
+                    }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                        <Ionicons name="calculator-outline" size={16} color="#3b82f6" />
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: isDark ? '#bfdbfe' : '#1d4ed8' }}>
+                          Sistema Francés — Fórmula de Cuota
+                        </Text>
+                      </View>
+                      <View style={{
+                        backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                        borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, marginBottom: 10,
+                      }}>
+                        <LaTeXView
+                          formula={String.raw`Cuota = P \times \frac{i(1+i)^n}{(1+i)^n - 1}`}
+                          color={isDark ? '#93c5fd' : '#2563eb'}
+                          backgroundColor={isDark ? '#1e293b' : '#ffffff'}
+                          fontSize={15}
+                        />
+                      </View>
+                      <View style={{ gap: 5 }}>
+                        {[
+                          ['P', 'Monto del préstamo'],
+                          ['i', 'TEM + Tasa de Desgravamen'],
+                          ['n', 'Plazo en meses'],
+                        ].map(([sym, desc]) => (
+                          <View key={sym} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={{
+                              fontFamily: 'monospace', fontWeight: '800', fontSize: 13,
+                              color: '#3b82f6', width: 18, textAlign: 'center',
+                            }}>{sym}</Text>
+                            <Text style={{ fontSize: 12, color: isDark ? '#94a3b8' : '#475569' }}>=  {desc}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                  </View>
+                )}
+              </ScrollView>
             </View>
           </View>
         </View>
