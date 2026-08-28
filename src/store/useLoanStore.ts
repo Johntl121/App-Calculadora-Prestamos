@@ -131,6 +131,7 @@ export const useLoanStore = create<LoanStore>()(
         seguroDesgravamenRateMensual: state.seguroDesgravamenRateMensual,
         moneda: state.moneda,
         prepago: state.prepago,
+        originalMetrics: state.originalMetrics,
       }),
     }
   )
