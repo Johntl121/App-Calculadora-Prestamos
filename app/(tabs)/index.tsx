@@ -7,6 +7,7 @@ import { useColorScheme } from 'nativewind';
 import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   LayoutAnimation,
   Modal,
   Pressable,
@@ -132,17 +133,32 @@ export default function LoanCalculatorScreen() {
         <tr class="${row.mes === 0 ? 'row-desembolso' : (row.mes % 2 === 0 ? 'row-even' : '')}">
           <td style="text-align:center;">${row.mes}</td>
           <td style="text-align:center;">${row.fecha}</td>
-          <td style="text-align:right; color:#0f766e; font-weight:bold;">${moneda} ${fn(row.saldoRemanente)}</td>
+          <td style="text-align:right; color:#0f766e; font-weight:bold;">${fn(row.saldoRemanente)}</td>
           <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.capitalAmortizado)}</td>
           <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.interesPagado)}</td>
-          <td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.seguroDesgravamen)}</td>
-          <td style="text-align:right; font-weight:bold;">${row.mes === 0 ? '<i>DESEMBOLSO</i>' : `${moneda} ${fn(row.cuotaTotal)}`}</td>
+          ${incluirSeguro ? `<td style="text-align:right;">${row.mes === 0 ? '-' : fn(row.seguroDesgravamen)}</td>` : ''}
+          <td style="text-align:right; font-weight:bold;">${row.mes === 0 ? '<i>DESEMBOLSO</i>' : fn(row.cuotaTotal)}</td>
         </tr>
       `).join('');
 
       const safeMoneda = moneda === 'S/' ? 'Soles' : moneda === '$' ? 'Dolares' : 'Euros';
       const cuotaMes1 = amortizationTable.find((r) => r.mes === 1)?.cuotaTotal ?? 0;
       const numMonto = parseFloat(monto) || 0;
+
+      // 1. Obtener el plazo real directamente de la tabla
+      const plazoRealCalc = amortizationTable[amortizationTable.length - 1]?.mes || 0;
+
+      // 2. Construir el bloque informativo del prepago (si existe)
+      let prepagoHtml = '';
+      if (prepago && originalMetrics) {
+        const ahorroInteres = originalMetrics.totalInteres - totalInteres;
+        prepagoHtml = `
+          <div class="no-break" style="background:#ecfdf5; border:1px solid #a7f3d0; padding:12px; border-radius:8px; margin-bottom:20px; font-size:12px;">
+            <strong style="color:#059669;">📌 Incluye pago adelantado:</strong> ${moneda} ${fn(prepago.monto)} en el mes ${prepago.mes}.
+            ${ahorroInteres > 0 ? `<br/><span style="color:#10b981; margin-top:4px; display:inline-block; font-weight:bold;">Ahorro proyectado en intereses: ${moneda} ${fn(ahorroInteres)}</span>` : ''}
+          </div>
+        `;
+      }
 
       const htmlContent = `
         <!DOCTYPE html>
@@ -174,16 +190,21 @@ export default function LoanCalculatorScreen() {
               tfoot tr { background:#0f172a; color:white; font-weight:bold; }
               tfoot td { padding:11px 7px; border:none; color:white; }
 
+              /* Control de Paginación PDF */
+              thead { display: table-header-group; }
+              tr { page-break-inside: avoid; break-inside: avoid; }
+              .no-break { page-break-inside: avoid; break-inside: avoid; }
+
               .doc-footer { margin-top:20px; text-align:center; font-size:10px; color:#94a3b8; }
             </style>
           </head>
           <body>
             <div class="header">
               <h1>Plan de Amortización</h1>
-              <p>Tasa (${tipoTasaFija}): ${tasaInteres || 0}% &nbsp;&middot;&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;&middot;&nbsp; Plazo: ${plazoMeses || 0} meses &nbsp;&middot;&nbsp; Base: ${tipoCalendario === 'comercial' ? 'Mes Comercial 30/360' : 'Calendario Real'}</p>
+              <p>Tasa (${tipoTasaFija}): ${tasaInteres || 0}% &nbsp;&middot;&nbsp; Seguro Desgravamen: ${seguroDesgravamenRateMensual || 0}% mensual &nbsp;&middot;&nbsp; Plazo: ${plazoRealCalc} meses &nbsp;&middot;&nbsp; Base: ${tipoCalendario === 'comercial' ? 'Mes Comercial 30/360' : 'Calendario Real'}</p>
             </div>
 
-            <div class="summary">
+            <div class="summary no-break">
               <div class="card">
                 <div class="lbl">Préstamo</div>
                 <div class="val">${moneda} ${fn(numMonto)}</div>
@@ -193,21 +214,23 @@ export default function LoanCalculatorScreen() {
                 <div class="val teal">${moneda} ${fn(cuotaMes1)}</div>
               </div>
               <div class="card">
-                <div class="lbl">TCEA Estimada</div>
+                <div class="lbl">TCEA Estimada (Referencial)</div>
                 <div class="val">${tcea > 0 ? tcea.toFixed(2) + '%' : 'N/A'}</div>
               </div>
             </div>
+
+            ${prepagoHtml}
 
             <table>
               <thead>
                 <tr>
                   <th>N°</th>
                   <th>Fecha</th>
-                  <th>Saldo Capital</th>
-                  <th>Amortización</th>
-                  <th>Interés</th>
-                  <th>Seguro</th>
-                  <th>Cuota Total</th>
+                  <th>Saldo Cap. (${moneda})</th>
+                  <th>Amort. (${moneda})</th>
+                  <th>Interés (${moneda})</th>
+                  ${incluirSeguro ? `<th>Seguro (${moneda})</th>` : ''}
+                  <th>Cuota Total (${moneda})</th>
                 </tr>
               </thead>
               <tbody>
@@ -216,13 +239,18 @@ export default function LoanCalculatorScreen() {
               <tfoot>
                 <tr>
                   <td colspan="3" style="text-align:right;">TOTALES:</td>
-                  <td style="text-align:right;">${moneda} ${fn(totalAmort)}</td>
-                  <td style="text-align:right;">${moneda} ${fn(totalInteres)}</td>
-                  <td style="text-align:right;">${moneda} ${fn(totalSeguro)}</td>
-                  <td style="text-align:right;">${moneda} ${fn(totalCuotas)}</td>
+                  <td style="text-align:right;">${fn(totalAmort)}</td>
+                  <td style="text-align:right;">${fn(totalInteres)}</td>
+                  ${incluirSeguro ? `<td style="text-align:right;">${fn(totalSeguro)}</td>` : ''}
+                  <td style="text-align:right;">${fn(totalCuotas)}</td>
                 </tr>
               </tfoot>
             </table>
+
+            <!-- 3. Disclaimer Legal -->
+            <div class="no-break" style="margin-top:20px; font-size:10px; color:#64748b; line-height:1.5;">
+              <strong>Aviso Legal:</strong> Los resultados y la TCEA mostrada son simulaciones referenciales. Los montos finales pueden variar ligeramente por reglas de redondeo normativo de la SBS, cobros de portes o políticas específicas de cada entidad financiera. Esta simulación no constituye asesoría financiera.
+            </div>
 
             <div class="doc-footer">
               Generado con Simulador de Préstamos Pro &bull; ${new Date().toLocaleDateString('es-PE')}
@@ -234,11 +262,17 @@ export default function LoanCalculatorScreen() {
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       const tempFile = new File(uri);
       const pdfFile = new File(Paths.cache, `Reporte_Simulacion_${numMonto}_${safeMoneda}.pdf`);
+      
+      if (pdfFile.exists) {
+        pdfFile.delete();
+      }
+
       tempFile.move(pdfFile);
 
       await Sharing.shareAsync(pdfFile.uri, { UTI: '.pdf', mimeType: 'application/pdf' });
     } catch (error) {
       console.error('Error generating PDF:', error);
+      Alert.alert('Error', 'No se pudo generar o compartir el PDF. Por favor, intenta de nuevo.');
     } finally {
       setIsGeneratingPDF(false);
     }
