@@ -12,10 +12,10 @@ const fmt = (value: number) =>
 
 // Flexes para distribución proporcional (suma = 17)
 // Mes(1) | Vcto(2.5) | SaldoCap(3) | Amort(2.5) | Interés(2.5) | Seguro(2.5) | Cuota(3)
-const F = { mes: 1, fecha: 2.5, saldo: 3, amort: 2.5, interes: 2.5, seguro: 2.5, cuota: 3 };
+const F = { mes: 1.5, fecha: 2.5, saldo: 3, amort: 2.5, interes: 2.5, seguro: 2.5, cuota: 3 };
 
 export default function AmortizationTableScreen() {
-  const { amortizationTable, moneda } = useLoanStore();
+  const { amortizationTable, moneda, prepago } = useLoanStore();
   const { colorScheme, toggleColorScheme } = useColorScheme();
   const insets = useSafeAreaInsets();
   const isDark = colorScheme === 'dark';
@@ -25,11 +25,14 @@ export default function AmortizationTableScreen() {
     const isDisembolso = item.mes === 0;
     const isLast = index === amortizationTable.length - 1;
     const isZebra = index % 2 === 1;
+    const isPrepago = prepago && item.mes === prepago.mes;
     const rowBg = isDisembolso
       ? (isDark ? '#052e16' : '#f0fdf4')
-      : isZebra
-        ? (isDark ? 'rgba(30,41,59,0.6)' : 'rgba(248,250,252,0.9)')
-        : (isDark ? '#1e293b' : '#ffffff');
+      : isPrepago
+        ? (isDark ? '#422006' : '#fef3c7')
+        : isZebra
+          ? (isDark ? 'rgba(30,41,59,0.6)' : 'rgba(248,250,252,0.9)')
+          : (isDark ? '#1e293b' : '#ffffff');
 
     const tMuted  = isDark ? '#94a3b8' : '#64748b';
     const tBase   = isDark ? '#e2e8f0' : '#334155';
@@ -50,8 +53,8 @@ export default function AmortizationTableScreen() {
         ]}
       >
         {/* Mes */}
-        <Text style={[styles.cell, { flex: F.mes, color: isDisembolso ? tAccent : tMuted, fontWeight: 'bold', fontSize: 9, textAlign: 'center' }]}>
-          {item.mes}
+        <Text style={[styles.cell, { flex: F.mes, color: isDisembolso ? tAccent : isPrepago ? '#f59e0b' : tMuted, fontWeight: 'bold', fontSize: 9, textAlign: 'center' }]}>
+          {isPrepago ? `⚡${item.mes}` : item.mes}
         </Text>
         {/* Próximo Vencimiento */}
         <Text style={[styles.cell, { flex: F.fecha, color: tMuted, fontSize: 9, textAlign: 'center' }]}>

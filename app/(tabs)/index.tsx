@@ -58,6 +58,7 @@ export default function LoanCalculatorScreen() {
     amortizationTable,
     tcea,
     prepago,
+    originalMetrics,
     updateParameter,
     setMoneda,
     calculateLoan,
@@ -602,10 +603,61 @@ export default function LoanCalculatorScreen() {
                 por {plazoReal} meses · {(incluirSeguro && parseFloat(seguroDesgravamenRateMensual || '0') > 0) ? 'incluye seguro desgravamen' : 'sin seguro de desgravamen'}
               </Text>
 
+              {/* ── BADGE + AHORRO DE PREPAGO ─────────────────── */}
+              {prepago && originalMetrics && (
+                <View style={{
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(52, 211, 153, 0.4)',
+                  borderRadius: 16,
+                  padding: 16,
+                  marginBottom: 16,
+                }}>
+                  {/* Badge */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 14, marginRight: 6 }}>📌</Text>
+                    <Text style={{ color: '#34d399', fontWeight: '800', fontSize: 12, letterSpacing: 0.5 }}>
+                      PREPAGO ACTIVO
+                    </Text>
+                  </View>
+                  <Text style={{ color: '#a7f3d0', fontSize: 12, marginBottom: 12 }}>
+                    {formatCurrency(prepago.monto, moneda)} en el mes {prepago.mes} · {prepago.tipo === 'reducir_cuota' ? 'Pagar Menos al Mes' : 'Terminar Antes'}
+                  </Text>
+
+                  {/* Ahorro cuantificado */}
+                  <View style={{ gap: 6 }}>
+                    {(() => {
+                      const ahorroInteres = originalMetrics.totalInteres - totalInteres;
+                      const ahorroMeses = originalMetrics.plazo - plazoReal;
+                      return (
+                        <>
+                          {ahorroInteres > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="trending-down-outline" size={14} color="#34d399" />
+                              <Text style={{ color: '#6ee7b7', fontSize: 13, fontWeight: '700' }}>
+                                Ahorras {formatCurrency(ahorroInteres, moneda)} en intereses
+                              </Text>
+                            </View>
+                          )}
+                          {ahorroMeses > 0 && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="time-outline" size={14} color="#34d399" />
+                              <Text style={{ color: '#6ee7b7', fontSize: 13, fontWeight: '700' }}>
+                                Terminas {ahorroMeses} {ahorroMeses === 1 ? 'mes' : 'meses'} antes
+                              </Text>
+                            </View>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </View>
+                </View>
+              )}
+
               {tcea > 0 && (
                 <View className="bg-teal-900 rounded-full py-2 px-4 self-center mb-6 border border-teal-700">
                   <Text className="text-teal-100 font-bold text-xs tracking-wider">
-                    TCEA ESTIMADA (Referencial): {tcea.toFixed(2)}%
+                    TCEA ESTIMADA: {tcea.toFixed(2)}%
                   </Text>
                 </View>
               )}
@@ -653,19 +705,19 @@ export default function LoanCalculatorScreen() {
                 </Pressable>
               </Link>
 
-              {/* Botón 2: Simular Pago Adelantado (Botón Secundario - Glass Teal con Borde) */}
+              {/* Botón 2: Simular / Editar Pago Adelantado */}
               <Pressable
                 className="rounded-2xl py-4 items-center justify-center flex-row mb-3"
                 style={{
-                  backgroundColor: 'rgba(15, 118, 110, 0.35)',
+                  backgroundColor: prepago ? 'rgba(6, 182, 212, 0.2)' : 'rgba(15, 118, 110, 0.35)',
                   borderWidth: 1,
-                  borderColor: 'rgba(94, 234, 212, 0.4)',
+                  borderColor: prepago ? 'rgba(103, 232, 249, 0.5)' : 'rgba(94, 234, 212, 0.4)',
                 }}
                 onPress={() => setPrepagoModalVisible(true)}
               >
-                <Ionicons name="cash-outline" size={20} color="#5eead4" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#5eead4', fontWeight: '700', fontSize: 15 }}>
-                  Simular Pago Adelantado
+                <Ionicons name={prepago ? 'create-outline' : 'cash-outline'} size={20} color={prepago ? '#67e8f9' : '#5eead4'} style={{ marginRight: 8 }} />
+                <Text style={{ color: prepago ? '#67e8f9' : '#5eead4', fontWeight: '700', fontSize: 15 }}>
+                  {prepago ? 'Editar Pago Adelantado' : 'Simular Pago Adelantado'}
                 </Text>
               </Pressable>
 
