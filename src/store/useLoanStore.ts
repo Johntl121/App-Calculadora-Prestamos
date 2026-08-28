@@ -4,10 +4,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AmortizationRow, LoanParameters } from '../types';
 import { generateAmortizationTable, calculateTCEA } from '../utils/loanMath';
 
+export interface OriginalMetrics {
+  totalInteres: number;
+  totalSeguro: number;
+  totalPagar: number;
+  plazo: number;
+  cuotaMes1: number;
+}
+
 interface LoanStore extends LoanParameters {
   moneda: string;
   amortizationTable: AmortizationRow[];
   tcea: number;
+  originalMetrics: OriginalMetrics | null;
   updateParameter: <K extends keyof LoanParameters>(key: K, value: LoanParameters[K]) => void;
   setMoneda: (moneda: string) => void;
   calculateLoan: () => void;
@@ -33,6 +42,7 @@ export const useLoanStore = create<LoanStore>()(
       ...initialState,
       amortizationTable: [],
       tcea: 0,
+      originalMetrics: null,
 
   updateParameter: (key, value) => {
     set((state) => {
@@ -57,6 +67,7 @@ export const useLoanStore = create<LoanStore>()(
       seguroDesgravamenRateMensual,
       fechaDesembolso,
       prepago,
+      originalMetrics,
     } = get();
 
     const result = generateAmortizationTable({
@@ -72,11 +83,30 @@ export const useLoanStore = create<LoanStore>()(
 
     const tcea = calculateTCEA(parseFloat(monto) || 0, result);
 
-    set({ amortizationTable: result, tcea });
+    // Solo guardar métricas originales cuando NO hay prepago activo
+    if (!prepago) {
+      let tInteres = 0, tSeguro = 0, tPagar = 0;
+      const cuotaMes1 = result.find(r => r.mes === 1)?.cuotaTotal ?? 0;
+      for (const row of result) {
+        if (row.mes === 0) continue;
+        tInteres += row.interesPagado;
+        tSeguro += row.seguroDesgravamen;
+        tPagar += row.cuotaTotal;
+      }
+      const plazo = result[result.length - 1]?.mes || 0;
+      set({
+        amortizationTable: result,
+        tcea,
+        originalMetrics: { totalInteres: tInteres, totalSeguro: tSeguro, totalPagar: tPagar, plazo, cuotaMes1 },
+      });
+    } else {
+      // Prepago activo: preservar originalMetrics existentes
+      set({ amortizationTable: result, tcea });
+    }
   },
 
   resetStore: () => {
-    set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [], tcea: 0 });
+    set({ ...initialState, fechaDesembolso: new Date(), amortizationTable: [], tcea: 0, originalMetrics: null });
   },
 
   newSimulation: () => {
@@ -85,6 +115,7 @@ export const useLoanStore = create<LoanStore>()(
       plazoMeses: '',
       amortizationTable: [],
       tcea: 0,
+      originalMetrics: null,
     });
   },
 }),
